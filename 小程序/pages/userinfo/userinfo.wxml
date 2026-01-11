@@ -1,0 +1,22 @@
+<!--pages/userinfo/userinfo.wxml-->
+
+<!-- open-type="chooseAvatar" 调用微信原生的 “选择头像” 功能；
+bindchooseavatar="getAvatar" 把选中的头像信息传递给页面的 getAvatar 方法，实现头像选择后的逻辑处理。 -->
+<!-- value="{{nickname}}" 的核心是动态绑定页面 data 里的 nickname 字段，让输入框显示该字段的当前值； -->
+<!-- type="nickname" 是微信小程序为 “昵称输入” 这个场景量身定制的输入框类型，核心意思是：它不是普通的文本输入框，而是微信专门优化过的、更贴合 “用户输入昵称” 这个需求的特殊输入框，比普通 type="text" 更适配实际使用场景。 -->
+
+<!-- open-type="chooseAvatar" 是小程序内置的开放能力，由微信底层实现，你只需直接使用；
+chooseavatar 是小程序为选择头像配套的内置事件名，必须按此名称绑定； -->
+<view class="userinfo-page">
+  <t-button class="get-avatar-button" open-type="chooseAvatar"  bindchooseavatar="getAvatar">
+      <image src="{{avatar?avatar: ' /assets/default_avatar.png' }}" class="avatar"></image>
+  </t-button>
+      <view class="get-nickname-input">
+        <view class="label">昵称</view>
+        <input type="nickname" value="{{nickname}}" placeholder="请输入您的昵称（1-20个字符）" bind:input="getNickname" maxlength="20" />
+
+      </view>
+
+      <t-button theme="primary" class="ack" bind:tap="submit">确认</t-button>
+</view>
+

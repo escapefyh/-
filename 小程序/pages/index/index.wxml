@@ -1,0 +1,137 @@
+<!--pages/index/index.wxml-->
+<view class="index-page">
+  <!-- 搜索框 -->
+  <view class="search-section">
+    <view class="search-container">
+      <view class="search-input-wrapper">
+        <text class="search-icon">🔍</text>
+        <input
+          class="search-input"
+          type="text"
+          value="{{searchKeyword}}"
+          placeholder="搜索商品"
+          confirm-type="search"
+          bindinput="onSearchInput"
+          bindconfirm="onSearch"
+        />
+        <view 
+          wx:if="{{searchKeyword}}"
+          class="search-clear"
+          catchtap="onSearchClear"
+        >
+          <text>×</text>
+        </view>
+      </view>
+      <view class="search-button" catchtap="onSearchButtonClick">
+        <text>搜索</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 商品分类横向滚动 -->
+  <view class="category-section">
+    <swiper
+      class="category-swiper"
+      indicator-dots="{{categoryTotalPages > 1}}"
+      indicator-color="rgba(0, 0, 0, 0.2)"
+      indicator-active-color="#0052d9"
+      autoplay="{{false}}"
+      current="{{categoryCurrentPage}}"
+      bindchange="onCategorySwiperChange"
+    >
+      <swiper-item wx:for="{{categoryPages}}" wx:key="index" class="category-swiper-item">
+        <view class="category-grid">
+          <view 
+            class="category-item" 
+            wx:for="{{item}}" 
+            wx:for-item="category"
+            wx:key="category_id"
+            bind:tap="onCategoryClick"
+            data-category-id="{{category.category_id}}"
+            data-category-name="{{category.name}}"
+          >
+            <view class="category-image-wrapper">
+              <image 
+                class="category-image" 
+                src="{{category.image}}" 
+                mode="aspectFill"
+              />
+            </view>
+            <view class="category-name">{{category.name}}</view>
+          </view>
+        </view>
+      </swiper-item>
+    </swiper>
+  </view>
+
+  <!-- 商品列表 -->
+  <view class="goods-section">
+    <!-- 加载中状态 -->
+    <view wx:if="{{loading && goodsList.length === 0}}" class="loading-container">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{!loading && goodsList.length === 0}}" class="empty-container">
+      <text>{{isSearching ? '无搜索结果' : '暂无商品'}}</text>
+    </view>
+
+    <!-- 商品网格 -->
+    <view wx:else class="goods-grid">
+      <view 
+        class="goods-item" 
+        wx:for="{{goodsList}}" 
+        wx:key="goods_id"
+        bind:tap="onGoodsClick"
+        data-goods-id="{{item.goods_id}}"
+      >
+        <!-- 商品图片 -->
+        <view class="goods-image-wrapper">
+          <image 
+            wx:if="{{item.images && item.images.length > 0}}"
+            class="goods-image" 
+            src="{{item.images[0]}}" 
+            mode="aspectFill"
+          />
+          <image 
+            wx:else
+            class="goods-image" 
+            src="/assets/default_goods.png" 
+            mode="aspectFill"
+          />
+          <view wx:if="{{item.group_buy_enabled}}" class="group-buy-badge">
+            <text>拼团</text>
+          </view>
+        </view>
+
+        <!-- 商品信息 -->
+        <view class="goods-info">
+          <!-- 商品描述（最多两行） -->
+          <view class="goods-description">{{item.description}}</view>
+          
+          <!-- 价格 -->
+          <view class="goods-price">¥{{item.price}}</view>
+          
+          <!-- 发布者信息 -->
+          <view class="goods-seller">
+            <text class="seller-name">{{item.seller && (item.seller.nickname || item.seller.name) || '未设置昵称'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多提示 -->
+    <view wx:if="{{loading && goodsList.length > 0}}" class="loading-more">
+      <text>加载中...</text>
+    </view>
+    <view wx:if="{{!hasMore && goodsList.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+  </view>
+</view>
+
+
+
+
+
+

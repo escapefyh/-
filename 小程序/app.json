@@ -1,0 +1,95 @@
+{
+  "darkmode": true,
+  "pages": [
+    "pages/login/login",
+    "pages/register/register",
+    "pages/index/index",
+    "pages/person/person",
+    "pages/repairlist/repairlist",
+    "pages/userinfo/userinfo",
+    "pages/sellindex/sellindex",
+    "pages/sellgoods/sellgoods",
+    "pages/goodsdetail/goodsdetail",
+    "pages/goodslist/goodslist",
+    "pages/firelist/firelist",
+    "pages/order/order",
+    "pages/collect/collect",
+    "pages/goodsmanage/goodsmanage",
+    "pages/message/message",
+    "pages/chat/chat"
+  ],
+  "subpackages": [],
+  "themeLocation": "theme.json",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-radio": "tdesign-miniprogram/radio/radio",
+    "t-radio-group": "tdesign-miniprogram/radio-group/radio-group",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-swiper": "tdesign-miniprogram/swiper/swiper",
+    "t-swiper-nav": "tdesign-miniprogram/swiper-nav/swiper-nav",
+    "t-image": "tdesign-miniprogram/image/image",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
+    "t-badge": "tdesign-miniprogram/badge/badge",
+    "t-switch": "tdesign-miniprogram/switch/switch",
+    "t-textarea": "tdesign-miniprogram/textarea/textarea",
+    "t-search": "tdesign-miniprogram/search/search"
+  },
+  "window": {
+    "navigationBarTitleText": "拼单商城",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "default",
+    "backgroundColor": "#f5f5f5",
+    "backgroundTextStyle": "light"
+  },
+  "resolveAlias": {
+    "@behaviors/*": "behaviors/*"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "rendererOptions": {
+    "skyline": {
+      "disableABTest": true,
+      "defaultDisplayBlock": true,
+      "defaultContentBox": true,
+      "sdkVersionBegin": "3.4.3",
+      "sdkVersionEnd": "15.255.255"
+    }
+  },
+  "tabBar": {
+    "selectedColor": "#1296db",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/firstpage.png",
+        "selectedIconPath": "assets/firstpage_filled.png"
+      },
+      {
+        "pagePath": "pages/message/message",
+        "text": "消息",
+        "iconPath": "assets/chat.png",
+        "selectedIconPath": "assets/chat_filled.png"
+      },
+      {
+        "pagePath": "pages/sellindex/sellindex",
+        "text": "发闲置",
+        "iconPath": "assets/startsell.png"
+      },
+      {
+        "pagePath": "pages/firelist/firelist",
+        "text": "热度榜",
+        "iconPath": "assets/fire.png",
+        "selectedIconPath": "assets/fire_filled.png"
+      },
+      {
+        "pagePath": "pages/person/person",
+        "text": "个人中心",
+        "iconPath": "assets/person.png",
+        "selectedIconPath": "assets/person_filled.png"
+      }
+    ]
+  }
+}

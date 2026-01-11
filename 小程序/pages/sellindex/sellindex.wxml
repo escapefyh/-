@@ -1,0 +1,24 @@
+<!--pages/sellindex/sellindex.wxml-->
+<view class="sellindex-page">
+  <!-- 顶部标题 -->
+  <view class="title-section">
+    <view class="main-title">成为卖家?发闲置</view>
+  </view>
+
+  <!-- 中间黄色卡片 -->
+  <view class="card-container">
+    <view class="yellow-card" bind:tap="onPublish">
+      <view class="card-header">
+        <text class="card-title">发闲置</text>
+        <text class="arrow-icon">›</text>
+      </view>
+      <view class="card-subtitle">30s发布宝贝,啥都能换钱</view>
+      <image class="card-image" src="/assets/sellindex.png" mode="widthFix" />
+    </view>
+  </view>
+
+  <!-- 底部关闭按钮 -->
+  <view class="close-btn" bind:tap="onClose">
+    <text class="close-icon">×</text>
+  </view>
+</view>

@@ -1,0 +1,7 @@
+{
+  "name": "@babel/runtime",
+  "version": "7.23.9",
+  "description": "babel's modular runtime helpers",
+  "license": "MIT",
+  "type": "commonjs"
+}

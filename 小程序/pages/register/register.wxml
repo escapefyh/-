@@ -1,0 +1,10 @@
+<!--pages/register/register.wxml-->
+<view class="register-page">
+  <view class="container">
+        <t-input label="姓名" placeholder="请输入您的姓名" value="{{name}}" bind:change="getname" />
+        <t-input label="电话" placeholder="请输入您的电话" value="{{phone}}" bind:change="getphone" />
+        <t-input label="账号" placeholder="请输入您的账号" value="{{account}}" bind:change="getaccount" />
+        <t-input label="密码" placeholder="请输入您的密码" value="{{password}}" bind:change="getpassword" />
+       <t-button theme="primary" size="large" bind:tap="register">注册</t-button>
+      </view>
+</view>

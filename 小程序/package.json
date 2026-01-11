@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@babel/runtime": "^7.23.9",
+    "tdesign-miniprogram": "^1.12.0"
+  }
+}

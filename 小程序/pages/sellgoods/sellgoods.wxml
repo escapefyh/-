@@ -1,0 +1,134 @@
+<!--pages/sellgoods/sellgoods.wxml-->
+<view class="sellgoods-page">
+  <!-- 顶部导航栏 -->
+  <view class="header">
+    <view class="close-btn" bind:tap="onClose">
+      <text class="close-icon">×</text>
+    </view>
+    <view class="header-title">发闲置</view>
+    <view class="publish-btn" bind:tap="onPublish">
+      <text>发布</text>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <view class="content">
+    <!-- 图片上传区域 -->
+    <view class="upload-section">
+      <view class="upload-box" bind:tap="onUploadImage">
+        <view class="upload-icon">+</view>
+        <view class="upload-text">
+          <text>添加优质</text>
+          <text>首图更吸引人~</text>
+        </view>
+      </view>
+      <view class="image-preview" wx:if="{{images.length > 0}}">
+        <image 
+          wx:for="{{images}}" 
+          wx:key="index" 
+          class="preview-image" 
+          src="{{item}}" 
+          mode="aspectFill"
+          bind:tap="onPreviewImage"
+          data-index="{{index}}"
+        />
+      </view>
+    </view>
+
+    <!-- 描述输入框 -->
+    <view class="description-section">
+      <t-textarea 
+        placeholder="描述一下宝贝的品牌型号、货品来源..." 
+        value="{{description}}"
+        bind:change="onDescriptionChange"
+        maxlength="{{500}}"
+        auto-height
+      />
+    </view>
+
+    <!-- 分类选择 -->
+    <view class="category-section" catchtap="onCategoryClick">
+      <view class="category-label">分类</view>
+      <view class="category-value">
+        <text class="category-text {{!selectedCategoryName ? 'placeholder' : ''}}">{{selectedCategoryName || '请选择商品分类'}}</text>
+        <text class="category-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 分类选择弹窗 -->
+    <view class="category-modal {{showCategoryModal ? 'show' : ''}}" catchtap="onCloseCategoryModal">
+      <view class="category-modal-content" catchtap="stopPropagation">
+        <view class="category-modal-header">
+          <text class="category-modal-title">选择商品分类</text>
+          <text class="category-modal-close" catchtap="onCloseCategoryModal">×</text>
+        </view>
+        <view class="category-modal-body">
+          <view 
+            class="category-item {{selectedCategoryId === item.category_id ? 'active' : ''}}"
+            wx:for="{{categoryList}}" 
+            wx:key="category_id"
+            catchtap="onSelectCategory"
+            data-category-id="{{item.category_id}}"
+            data-category-name="{{item.name}}"
+            data-index="{{index}}"
+          >
+            <text class="category-item-text">{{item.name}}</text>
+            <text class="category-item-check" wx:if="{{selectedCategoryId === item.category_id}}">✓</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 价格选择 -->
+    <view class="price-section" bind:tap="onPriceClick">
+      <view class="price-label">价格</view>
+      <view class="price-value">
+        <text class="price-amount">¥{{price || '0.00'}}</text>
+        <text class="price-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 拼团选项 -->
+    <view class="group-buy-section">
+      <view class="group-buy-label">
+        <text>是否开启拼团购买</text>
+      </view>
+      <t-switch value="{{groupBuyEnabled}}" bind:change="onGroupBuyChange" />
+    </view>
+
+    <!-- 拼团设置（仅在开启拼团时显示） -->
+    <view wx:if="{{groupBuyEnabled}}" class="group-buy-settings">
+      <!-- 拼单人数选择 -->
+      <view class="group-buy-setting-item">
+        <view class="setting-label">拼单人数</view>
+        <view class="setting-value">
+          <view 
+            class="group-count-option {{groupBuyCount === item ? 'active' : ''}}"
+            wx:for="{{[2,3,4,5]}}" 
+            wx:key="*this"
+            bind:tap="onSelectGroupCount"
+            data-count="{{item}}"
+          >
+            <text>{{item}}人</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 折扣设置 -->
+      <view class="group-buy-setting-item">
+        <view class="setting-label">拼团折扣</view>
+        <view class="setting-value">
+          <input 
+            class="discount-input" 
+            type="digit" 
+            placeholder="请输入折扣（0-1之间）"
+            value="{{groupBuyDiscount}}"
+            bindinput="onDiscountInput"
+          />
+          <text class="discount-tip">折（例如：0.9表示9折）</text>
+        </view>
+        <view class="setting-desc">折扣范围：0 小于 折扣 小于 1（不能等于0或1）</view>
+      </view>
+    </view>
+  </view>
+</view>

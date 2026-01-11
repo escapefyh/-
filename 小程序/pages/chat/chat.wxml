@@ -1,0 +1,76 @@
+<!--pages/chat/chat.wxml-->
+<view class="chat-page">
+  <!-- 商品信息卡片（如果有） -->
+  <view wx:if="{{goodsInfo.goods_id}}" class="goods-card" bind:tap="onGoodsCardClick">
+    <image 
+      wx:if="{{goodsInfo.images && goodsInfo.images.length > 0}}"
+      class="goods-image" 
+      src="{{goodsInfo.images[0]}}" 
+      mode="aspectFill"
+    />
+    <view class="goods-info">
+      <view class="goods-description">{{goodsInfo.description}}</view>
+      <view class="goods-price">¥{{goodsInfo.price}}</view>
+    </view>
+  </view>
+
+  <!-- 消息列表 -->
+  <view class="chat-messages" id="messageList">
+    <view wx:if="{{loading && messageList.length === 0}}" class="loading-container">
+      <text>加载中...</text>
+    </view>
+
+    <view wx:elif="{{!loading && messageList.length === 0}}" class="empty-container">
+      <text>暂无消息，开始聊天吧~</text>
+    </view>
+
+    <view wx:else class="message-list">
+      <view 
+        class="message-item {{item.isMine ? 'message-mine' : 'message-other'}}"
+        wx:for="{{messageList}}"
+        wx:key="message_id"
+      >
+        <!-- 对方头像（仅显示在对方消息中） -->
+        <image 
+          wx:if="{{!item.isMine}}"
+          class="message-avatar"
+          src="{{targetUserInfo.avatar || '/assets/default_avatar.png'}}"
+          mode="aspectFill"
+        />
+        
+        <!-- 消息内容 -->
+        <view class="message-content">
+          <view class="message-bubble">
+            <text class="message-text">{{item.content}}</text>
+          </view>
+          <view class="message-time">{{item.timeText}}</view>
+        </view>
+
+        <!-- 自己头像（仅显示在自己消息中） -->
+        <image 
+          wx:if="{{item.isMine}}"
+          class="message-avatar"
+          src="{{userinfo && userinfo.avatar ? userinfo.avatar : '/assets/default_avatar.png'}}"
+          mode="aspectFill"
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 输入框区域 -->
+  <view class="chat-input-area">
+    <input
+      class="chat-input"
+      type="text"
+      value="{{inputText}}"
+      placeholder="输入消息..."
+      bindinput="onInputChange"
+      confirm-type="send"
+      bindconfirm="onSendMessage"
+    />
+    <view class="send-button" bind:tap="onSendMessage">
+      <text>发送</text>
+    </view>
+  </view>
+</view>
+

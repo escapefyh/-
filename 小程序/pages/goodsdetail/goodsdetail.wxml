@@ -1,0 +1,99 @@
+<!--pages/goodsdetail/goodsdetail.wxml-->
+<view class="goods-detail-page">
+  <view wx:if="{{loading}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:else class="content">
+    <!-- 卖家信息（顶部） -->
+    <view class="seller-header">
+      <image 
+        class="seller-avatar" 
+        src="{{seller.avatar || '/assets/default_avatar.png'}}" 
+        mode="aspectFill"
+        binderror="onAvatarError"
+      />
+      <text class="seller-name-header">{{seller.nickname || seller.name || '未设置昵称'}}</text>
+    </view>
+
+    <!-- 商品图片轮播 -->
+    <view class="image-section">
+      <t-swiper
+        wx:if="{{goods.images && goods.images.length > 0}}"
+        list="{{goods.images}}"
+        navigation="{{ { type: 'dots-bar' } }}"
+        autoplay="{{false}}"
+      />
+    </view>
+
+    <!-- 商品信息 -->
+    <view class="goods-info">
+      <view class="price-section">
+        <text class="price">¥{{goods.price}}</text>
+        <view wx:if="{{goods.group_buy_enabled}}" class="group-buy-tag">
+          <text>拼团{{groupBuyDiscountText}}折</text>
+        </view>
+      </view>
+      
+      <view class="description">{{goods.description}}</view>
+      
+      <view class="meta-info">
+        <view class="meta-item">
+          <text class="label">发布时间：</text>
+          <text class="value">{{createTime}}</text>
+        </view>
+        <view class="meta-item" wx:if="{{goods.sales_count !== undefined && goods.sales_count !== null}}">
+          <text class="label">销量：</text>
+          <text class="value sales-value">已售{{goods.sales_count}}件</text>
+        </view>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-action-bar">
+    <!-- 消息图标（显示评论数） -->
+    <view class="action-item" bind:tap="onCommentClick">
+      <image class="action-icon" src="/assets/message.png" mode="aspectFit" />
+      <text class="action-count">{{commentCount}}</text>
+    </view>
+    
+    <!-- 收藏图标（显示收藏数） -->
+    <view class="action-item" bind:tap="onFavoriteClick">
+      <image 
+        class="action-icon" 
+        src="{{isFavorited ? '/assets/Collection_filled.png' : '/assets/Collection.png'}}" 
+        mode="aspectFit" 
+      />
+      <text class="action-count">{{favoriteCount}}</text>
+    </view>
+
+    <!-- 聊一聊按钮 -->
+    <view class="chat-btn" bind:tap="onChatClick">
+      <text class="chat-text">聊一聊</text>
+    </view>
+
+    <!-- 购买按钮区域 -->
+    <view class="buy-buttons">
+      <!-- 未开启拼团：只显示直接买 -->
+      <view wx:if="{{!goods.group_buy_enabled}}" class="buy-btn gray-btn" bind:tap="onBuyClick">
+        <text class="buy-price">¥{{goods.price}}</text>
+        <text class="buy-label">直接买</text>
+      </view>
+
+      <!-- 开启拼团：显示两个购买选项 -->
+      <view wx:else class="buy-buttons-group">
+        <view class="buy-btn gray-btn" bind:tap="onBuyClick">
+          <text class="buy-price">¥{{goods.price}}</text>
+          <text class="buy-label">直接买</text>
+        </view>
+        <view class="buy-btn yellow-btn" bind:tap="onGroupBuyClick">
+          <text class="buy-price">¥{{groupBuyPrice}}</text>
+          <text class="buy-label">{{goods.group_buy_count}}人小刀</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+

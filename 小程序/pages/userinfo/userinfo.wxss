@@ -1,0 +1,54 @@
+/* pages/userinfo/userinfo.wxss */
+.userinfo-page{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 100rpx;
+}
+
+.get-avatar-button{
+  width: 220rpx !important;
+  height: 220rpx !important;
+  background-color: transparent;
+}
+
+.avatar{
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: 50%;
+}
+/*gap: 5rpx 20rpx;
+这个写法是复合属性，包含两个值，对应 “行间距” 和 “列间距”：
+第一个值 5rpx：表示行间距（垂直方向的间距），即上下相邻的子元素之间的距离；
+第二个值 20rpx：表示列间距（水平方向的间距），即左右相邻的子元素之间的距离。
+如果只写一个值（比如 gap: 20rpx;），则行间距和列间距都是 20rpx。
+*/
+.get-nickname-input{
+  margin-top: 60rpx;
+  background-color: #fff;
+  padding: 30rpx;
+  display: flex;
+  align-items: center;
+  gap: 5rpx 20rpx;
+  border-radius: 20rpx;
+  width: 80%;
+}
+
+.get-nickname-input .label{
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
+  min-width: 80rpx;
+}
+
+.get-nickname-input input{
+  flex: 1;
+  font-size: 32rpx;
+  color: #333;
+}
+
+.ack{
+  margin-top: 50rpx;
+  width: 200rpx;
+  height: 20rpx;
+}

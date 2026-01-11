@@ -1,0 +1,66 @@
+<!--pages/goodslist/goodslist.wxml-->
+<view class="goods-list-page">
+  <!-- 加载中状态 -->
+  <view wx:if="{{loading && goodsList.length === 0}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!loading && goodsList.length === 0}}" class="empty-container">
+    <text>暂无商品</text>
+  </view>
+
+  <!-- 商品网格 -->
+  <view wx:else class="goods-grid">
+    <view 
+      class="goods-item" 
+      wx:for="{{goodsList}}" 
+      wx:key="goods_id"
+      bind:tap="onGoodsClick"
+      data-goods-id="{{item.goods_id}}"
+    >
+      <!-- 商品图片 -->
+      <view class="goods-image-wrapper">
+        <image 
+          wx:if="{{item.images && item.images.length > 0}}"
+          class="goods-image" 
+          src="{{item.images[0]}}" 
+          mode="aspectFill"
+        />
+        <image 
+          wx:else
+          class="goods-image" 
+          src="/assets/default_goods.png" 
+          mode="aspectFill"
+        />
+        <view wx:if="{{item.group_buy_enabled}}" class="group-buy-badge">
+          <text>拼团</text>
+        </view>
+      </view>
+
+      <!-- 商品信息 -->
+      <view class="goods-info">
+        <!-- 商品描述（最多两行） -->
+        <view class="goods-description">{{item.description}}</view>
+        
+        <!-- 价格 -->
+        <view class="goods-price">¥{{item.price}}</view>
+        
+        <!-- 发布者信息和销量 -->
+        <view class="goods-seller">
+          <text class="seller-name">{{item.seller && (item.seller.nickname || item.seller.name) || '未设置昵称'}}</text>
+          <text wx:if="{{item.sales_count !== undefined && item.sales_count !== null && item.sales_count > 0}}" class="sales-count">已售{{item.sales_count}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多提示 -->
+  <view wx:if="{{loading && goodsList.length > 0}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+  <view wx:if="{{!hasMore && goodsList.length > 0}}" class="no-more">
+    <text>没有更多了</text>
+  </view>
+</view>
+

@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "拼单商城",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "navigationStyle": "default",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}
+

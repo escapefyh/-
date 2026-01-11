@@ -1,0 +1,47 @@
+<!--pages/message/message.wxml-->
+<view class="message-page">
+  <!-- 加载中状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!loading && chatList.length === 0}}" class="empty-container">
+    <text>暂无聊天记录</text>
+  </view>
+
+  <!-- 聊天列表 -->
+  <view wx:else class="chat-list">
+    <view 
+      class="chat-item"
+      wx:for="{{chatList}}"
+      wx:key="chat_id"
+      bind:tap="onChatItemClick"
+      data-target-user-id="{{item.target_user_id}}"
+      data-goods-id="{{item.goods_id}}"
+    >
+      <!-- 头像 -->
+      <image 
+        class="chat-avatar"
+        src="{{item.target_user_avatar}}"
+        mode="aspectFill"
+        binderror="onAvatarError"
+        data-index="{{index}}"
+      />
+      
+      <!-- 聊天信息 -->
+      <view class="chat-info">
+        <view class="chat-header">
+          <text class="chat-name">{{item.target_user_name}}</text>
+          <text class="chat-time">{{item.timeText}}</text>
+        </view>
+        <view class="chat-content">
+          <text class="chat-message">{{item.last_message || '暂无消息'}}</text>
+          <view wx:if="{{item.unread_count > 0}}" class="unread-badge">
+            <text>{{item.unread_count > 99 ? '99+' : item.unread_count}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

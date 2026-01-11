@@ -1,0 +1,107 @@
+/* pages/message/message.wxss */
+.message-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 聊天列表 */
+.chat-list {
+  background-color: #fff;
+}
+
+/* 聊天项 */
+.chat-item {
+  display: flex;
+  align-items: center;
+  padding: 30rpx 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.chat-item:active {
+  background-color: #f8f8f8;
+}
+
+/* 头像 */
+.chat-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  margin-right: 20rpx;
+  background-color: #f0f0f0;
+}
+
+/* 聊天信息 */
+.chat-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.chat-name {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.chat-time {
+  font-size: 24rpx;
+  color: #999;
+  margin-left: 20rpx;
+}
+
+.chat-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-message {
+  font-size: 28rpx;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* 未读消息数 */
+.unread-badge {
+  min-width: 36rpx;
+  height: 36rpx;
+  background-color: #ff4444;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12rpx;
+  margin-left: 10rpx;
+}
+
+.unread-badge text {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: 500;
+}

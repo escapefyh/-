@@ -1,0 +1,25 @@
+/* pages/login/login.wxss */
+.login-page{
+  padding-top: 200rpx;
+}
+.container{
+  background-color: white;
+  padding: 40rpx;
+  border-radius: 20rpx;
+  box-sizing: border-box;
+  width: 90%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx 0;
+}
+.box .t-radio{
+  margin-right: 60rpx;
+}
+.to-register-link{
+  text-align: right;
+  color: blue;
+}
+.t-button{
+  width: 50%;
+}
