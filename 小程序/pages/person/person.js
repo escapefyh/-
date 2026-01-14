@@ -45,6 +45,15 @@ Page({
     });
   },
 
+  /**
+   * 跳转到地址管理页面
+   */
+  goToAddressManage() {
+    wx.navigateTo({
+      url: '../addresslist/addresslist'
+    });
+  },
+
   toquit(){
     // 显示确认对话框
     wx.showModal({

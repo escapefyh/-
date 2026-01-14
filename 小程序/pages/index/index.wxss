@@ -79,6 +79,61 @@
   min-width: 120rpx;
 }
 
+/* 导航栏区域 */
+.nav-section {
+  background-color: #fff;
+  padding: 0 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  height: 88rpx;
+}
+
+.nav-tab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 28rpx;
+  color: #333;
+  cursor: pointer;
+}
+
+.nav-tab text {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 4rpx;
+  background-color: #000;
+  transition: width 0.3s ease;
+}
+
+.nav-tab.active {
+  color: #000;
+  font-weight: 500;
+}
+
+.nav-tab.active .nav-tab-indicator {
+  width: 60rpx;
+}
+
+.nav-tab:active {
+  opacity: 0.7;
+}
+
 /* 商品分类区域 */
 .category-section {
   background-color: #fff;

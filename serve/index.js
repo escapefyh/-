@@ -31,6 +31,7 @@ const orderRoutes = require('./routes/order');
 const groupBuyRoutes = require('./routes/groupBuy');
 const favoriteRoutes = require('./routes/favorite');
 const chatRoutes = require('./routes/chat');
+const addressRoutes = require('./routes/address');
 
 // 注册路由
 app.use('/', authRoutes);              // /register, /login
@@ -45,6 +46,7 @@ app.use('/order', orderRoutes);        // /order/create
 app.use('/groupBuy', groupBuyRoutes);  // /groupBuy/getCurrentCount, /groupBuy/create
 app.use('/favorite', favoriteRoutes);  // /favorite/toggle
 app.use('/chat', chatRoutes);          // /chat/create
+app.use('/address', addressRoutes);   // /address/list, /address/detail, /address/add, /address/update, /address/delete, /address/setDefault
 
 // 启动服务
 app.listen(3000,() => {

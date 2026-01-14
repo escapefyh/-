@@ -28,6 +28,36 @@
     </view>
   </view>
 
+  <!-- 导航栏 -->
+  <view class="nav-section">
+    <view class="nav-tabs">
+      <view 
+        class="nav-tab {{currentTab === 'follow' ? 'active' : ''}}"
+        bindtap="onTabChange"
+        data-tab="follow"
+      >
+        <text>关注</text>
+        <view class="nav-tab-indicator"></view>
+      </view>
+      <view 
+        class="nav-tab {{currentTab === 'recommend' ? 'active' : ''}}"
+        bindtap="onTabChange"
+        data-tab="recommend"
+      >
+        <text>推荐</text>
+        <view class="nav-tab-indicator"></view>
+      </view>
+      <view 
+        class="nav-tab {{currentTab === 'new' ? 'active' : ''}}"
+        bindtap="onTabChange"
+        data-tab="new"
+      >
+        <text>新发</text>
+        <view class="nav-tab-indicator"></view>
+      </view>
+    </view>
+  </view>
+
   <!-- 商品分类横向滚动 -->
   <view class="category-section">
     <swiper

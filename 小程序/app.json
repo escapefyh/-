@@ -16,7 +16,9 @@
     "pages/collect/collect",
     "pages/goodsmanage/goodsmanage",
     "pages/message/message",
-    "pages/chat/chat"
+    "pages/chat/chat",
+    "pages/addresslist/addresslist",
+    "pages/addressedit/addressedit"
   ],
   "subpackages": [],
   "themeLocation": "theme.json",

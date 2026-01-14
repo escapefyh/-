@@ -130,5 +130,82 @@
         <view class="setting-desc">折扣范围：0 小于 折扣 小于 1（不能等于0或1）</view>
       </view>
     </view>
+
+    <!-- 规格选项 -->
+    <view class="spec-section">
+      <view class="spec-label">
+        <text>是否开启规格</text>
+      </view>
+      <t-switch value="{{specEnabled}}" bind:change="onSpecChange" />
+    </view>
+
+    <!-- 规格设置（仅在开启规格时显示） -->
+    <view wx:if="{{specEnabled}}" class="spec-settings">
+      <!-- 提示文字 -->
+      <view class="spec-tip">
+        <text>请添加商品规格选项，每个选项需填写名称、价格和库存</text>
+      </view>
+
+      <!-- SKU选项列表 -->
+      <view class="spec-options">
+        <view 
+          class="spec-option-item"
+          wx:for="{{specOptions}}"
+          wx:key="index"
+        >
+          <view class="spec-option-header">
+            <text class="spec-option-number">选项 {{index + 1}}</text>
+            <view class="spec-option-delete" bindtap="onDeleteSpecOption" data-index="{{index}}">
+              <text>删除</text>
+            </view>
+          </view>
+          
+          <view class="spec-option-content">
+            <view class="spec-option-field">
+              <text class="spec-option-label">规格名称：</text>
+              <input 
+                class="spec-option-input"
+                type="text"
+                placeholder="如：【2件】黑色/全新***"
+                value="{{item.name}}"
+                bindinput="onSpecOptionNameInput"
+                data-index="{{index}}"
+              />
+            </view>
+            
+            <view class="spec-option-field">
+              <text class="spec-option-label">价格：</text>
+              <input 
+                class="spec-option-input spec-option-price"
+                type="digit"
+                placeholder="请输入价格"
+                value="{{item.price}}"
+                bindinput="onSpecOptionPriceInput"
+                data-index="{{index}}"
+              />
+              <text class="spec-option-unit">元</text>
+            </view>
+            
+            <view class="spec-option-field">
+              <text class="spec-option-label">库存：</text>
+              <input 
+                class="spec-option-input spec-option-stock"
+                type="number"
+                placeholder="请输入库存数量"
+                value="{{item.stock}}"
+                bindinput="onSpecOptionStockInput"
+                data-index="{{index}}"
+              />
+              <text class="spec-option-unit">件</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 添加新选项按钮 -->
+      <view class="spec-add-option-btn" bindtap="onAddSpecOption">
+        <text>+ 添加新选项</text>
+      </view>
+    </view>
   </view>
 </view>

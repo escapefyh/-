@@ -15,6 +15,8 @@ Page({
     groupBuyDiscount: 0.9, // 默认拼团折扣9折
     uploading: false,
     showCategoryModal: false, // 是否显示分类选择弹窗
+    specEnabled: false, // 是否开启规格
+    specOptions: [], // SKU选项列表，每个选项包含：name（规格名称）、price（价格）、stock（库存）
     // 商品分类列表
     categoryList: [
       { category_id: 1, name: '美食生鲜' },
@@ -137,6 +139,51 @@ Page({
       }
     }
 
+    // 规格验证
+    if (this.data.specEnabled) {
+      if (!this.data.specOptions || this.data.specOptions.length === 0) {
+        wx.showToast({
+          title: '请至少添加一个规格选项',
+          icon: 'none'
+        });
+        return;
+      }
+
+      // 验证每个规格选项
+      for (let i = 0; i < this.data.specOptions.length; i++) {
+        const option = this.data.specOptions[i];
+        
+        // 验证规格名称
+        if (!option.name || !option.name.trim()) {
+          wx.showToast({
+            title: `第${i + 1}个规格选项的名称不能为空`,
+            icon: 'none'
+          });
+          return;
+        }
+
+        // 验证价格
+        const optionPrice = parseFloat(option.price);
+        if (isNaN(optionPrice) || optionPrice <= 0) {
+          wx.showToast({
+            title: `第${i + 1}个规格选项"${option.name}"的价格必须大于0`,
+            icon: 'none'
+          });
+          return;
+        }
+
+        // 验证库存
+        const optionStock = parseInt(option.stock);
+        if (isNaN(optionStock) || optionStock < 0) {
+          wx.showToast({
+            title: `第${i + 1}个规格选项"${option.name}"的库存必须大于等于0`,
+            icon: 'none'
+          });
+          return;
+        }
+      }
+    }
+
     // 防止重复提交
     if (this.data.uploading) {
       return;
@@ -204,7 +251,9 @@ Page({
         category_id: this.data.selectedCategoryId, // 分类ID（必填）
         groupBuyEnabled: this.data.groupBuyEnabled || false,
         groupBuyCount: this.data.groupBuyEnabled ? parseInt(this.data.groupBuyCount) : null, // 拼单人数
-        groupBuyDiscount: this.data.groupBuyEnabled ? parseFloat(this.data.groupBuyDiscount.toFixed(2)) : null // 拼团折扣
+        groupBuyDiscount: this.data.groupBuyEnabled ? parseFloat(this.data.groupBuyDiscount.toFixed(2)) : null, // 拼团折扣
+        specEnabled: this.data.specEnabled || false, // 是否开启规格
+        specs: this.data.specEnabled ? this.formatSpecsForApi() : null // 规格选项数据
       };
 
       // 调用发布接口
@@ -393,6 +442,114 @@ Page({
       icon: 'success',
       duration: 1500
     });
+  },
+
+  /**
+   * 规格开关变化
+   */
+  onSpecChange(e) {
+    const enabled = e.detail.value;
+    
+    if (enabled) {
+      // 开启规格时，如果当前没有选项，自动添加一个空选项
+      const currentOptions = this.data.specOptions || [];
+      if (currentOptions.length === 0) {
+        this.setData({
+          specEnabled: enabled,
+          specOptions: [{
+            name: '',
+            price: '',
+            stock: ''
+          }]
+        });
+      } else {
+        this.setData({
+          specEnabled: enabled
+        });
+      }
+    } else {
+      // 关闭规格时，清空规格数据
+      this.setData({
+        specEnabled: enabled,
+        specOptions: []
+      });
+    }
+  },
+
+  /**
+   * 添加规格选项
+   */
+  onAddSpecOption() {
+    const newOption = {
+      name: '',
+      price: '',
+      stock: ''
+    };
+    this.setData({
+      specOptions: [...this.data.specOptions, newOption]
+    });
+  },
+
+  /**
+   * 删除规格选项
+   */
+  onDeleteSpecOption(e) {
+    const index = e.currentTarget.dataset.index;
+    const options = [...this.data.specOptions];
+    options.splice(index, 1);
+    this.setData({
+      specOptions: options
+    });
+  },
+
+  /**
+   * 规格选项名称输入
+   */
+  onSpecOptionNameInput(e) {
+    const index = e.currentTarget.dataset.index;
+    const value = e.detail.value;
+    const options = [...this.data.specOptions];
+    options[index].name = value;
+    this.setData({
+      specOptions: options
+    });
+  },
+
+  /**
+   * 规格选项价格输入
+   */
+  onSpecOptionPriceInput(e) {
+    const index = e.currentTarget.dataset.index;
+    const value = e.detail.value;
+    const options = [...this.data.specOptions];
+    options[index].price = value;
+    this.setData({
+      specOptions: options
+    });
+  },
+
+  /**
+   * 规格选项库存输入
+   */
+  onSpecOptionStockInput(e) {
+    const index = e.currentTarget.dataset.index;
+    const value = e.detail.value;
+    const options = [...this.data.specOptions];
+    options[index].stock = value;
+    this.setData({
+      specOptions: options
+    });
+  },
+
+  /**
+   * 格式化规格数据为API格式
+   */
+  formatSpecsForApi() {
+    return this.data.specOptions.map(option => ({
+      name: option.name.trim(),
+      price: parseFloat(parseFloat(option.price).toFixed(2)),
+      stock: parseInt(option.stock) || 0
+    }));
   },
 
   /**

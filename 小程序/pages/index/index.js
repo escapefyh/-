@@ -7,6 +7,7 @@ Page({
    * 页面的初始数据
    */
   data: {
+    currentTab: 'recommend', // 当前选中的标签：follow-关注, recommend-推荐, new-新发
     searchKeyword: '',    // 用户输入的搜索关键词
     isSearching: false,   // 是否处于搜索状态
     goodsList: [],        // 商品列表
@@ -93,6 +94,27 @@ Page({
     wx.navigateTo({ 
       url:page,
     })
+  },
+
+  /**
+   * 导航标签切换
+   */
+  onTabChange(e) {
+    const tab = e.currentTarget.dataset.tab;
+    if (this.data.currentTab === tab) {
+      return; // 如果点击的是当前标签，不执行任何操作
+    }
+    
+    this.setData({
+      currentTab: tab,
+      page: 1,
+      hasMore: true,
+      goodsList: []
+    });
+    
+    // 根据不同的标签加载不同的数据
+    // 这里可以根据实际需求调用不同的接口
+    this.loadGoodsList(true);
   },
 
   /**

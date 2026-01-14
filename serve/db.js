@@ -104,6 +104,12 @@ const GoodsSchema = new mongoose.Schema({
         type: Number,
         default: null
     },
+    // 是否开启规格
+    spec_enabled: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     // 创建时间
     create_time: {
         type: Number,
@@ -352,6 +358,131 @@ ChatMessageSchema.index({ receiver_id: 1, is_read: 1 }); // 用于统计未读�
 
 const ChatMessage = mongoose.model("ChatMessage", ChatMessageSchema);
 
+// 规格选项表
+const SpecOptionSchema = new mongoose.Schema({
+    // 规格选项ID
+    spec_option_id: {
+        type: String,
+        required: true
+    },
+    // 商品ID（外键）
+    goods_id: {
+        type: String,
+        required: true
+    },
+    // 规格选项名称
+    name: {
+        type: String,
+        required: true
+    },
+    // 价格
+    price: {
+        type: Number,
+        required: true
+    },
+    // 库存
+    stock: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    // 排序顺序
+    sort_order: {
+        type: Number,
+        default: 0
+    },
+    // 创建时间
+    created_at: {
+        type: Number,
+        default: () => new Date().getTime()
+    },
+    // 更新时间
+    updated_at: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引，便于查询某个商品的所有规格选项
+SpecOptionSchema.index({ goods_id: 1 });
+
+const SpecOption = mongoose.model("SpecOption", SpecOptionSchema);
+
+// 收货地址表
+const AddressSchema = new mongoose.Schema({
+    // 地址ID
+    address_id: {
+        type: String,
+        required: true
+    },
+    // 用户ID（外键）
+    user_id: {
+        type: String,
+        required: true
+    },
+    // 联系人姓名
+    contact_name: {
+        type: String,
+        required: true
+    },
+    // 手机号
+    phone: {
+        type: String,
+        required: true
+    },
+    // 所在地区（省 市 区）
+    region: {
+        type: String,
+        required: true
+    },
+    // 省份
+    province: {
+        type: String,
+        required: true
+    },
+    // 城市
+    city: {
+        type: String,
+        required: true
+    },
+    // 区/县
+    district: {
+        type: String,
+        required: true
+    },
+    // 街道（可选）
+    street: {
+        type: String,
+        default: ''
+    },
+    // 详细地址
+    detail_address: {
+        type: String,
+        required: true
+    },
+    // 是否默认地址（0-否，1-是）
+    is_default: {
+        type: Number,
+        default: 0
+    },
+    // 创建时间
+    created_at: {
+        type: Number,
+        required: true
+    },
+    // 更新时间
+    updated_at: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引
+AddressSchema.index({ user_id: 1 }); // 便于查询某个用户的所有地址
+AddressSchema.index({ user_id: 1, is_default: 1 }); // 便于查询用户的默认地址
+
+const Address = mongoose.model("Address", AddressSchema);
+
 module.exports = {
     User,
     Goods,
@@ -360,5 +491,7 @@ module.exports = {
     Comment,
     Favorite,
     Chat,
-    ChatMessage
+    ChatMessage,
+    SpecOption,
+    Address
 };

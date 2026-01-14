@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods } = require('../db');
+const { User, Goods, SpecOption } = require('../db');
 
 // 发布商品
 router.post('/publish', async (req, res) => {
     try {
-        const { images, description, price, category_id, groupBuyEnabled, groupBuyCount, groupBuyDiscount } = req.body;
+        const { images, description, price, category_id, groupBuyEnabled, groupBuyCount, groupBuyDiscount, specEnabled, specs } = req.body;
 
         // 1. 用户验证：从请求中获取 user_id（前端应在登录后保存 user_id，发布商品时传递）
         const userId = req.body.user_id;
@@ -155,11 +155,92 @@ router.post('/publish', async (req, res) => {
             }
         }
 
-        // 7. 生成商品ID
+        // 7. 规格验证
+        const specEnabledValue = specEnabled === true;
+        
+        if (specEnabledValue) {
+            // 当开启规格时，specs 字段必填且不能为空数组
+            if (!specs || !Array.isArray(specs) || specs.length === 0) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "请至少添加一个规格选项"
+                });
+            }
+
+            // 验证每个规格选项
+            for (let i = 0; i < specs.length; i++) {
+                const specOption = specs[i];
+                
+                // 验证规格选项结构
+                if (!specOption || typeof specOption !== 'object') {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: "规格数据格式错误：specs 必须是数组类型"
+                    });
+                }
+
+                // 验证规格选项名称
+                if (!specOption.name || typeof specOption.name !== 'string' || specOption.name.trim().length === 0) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: `第${i + 1}个规格选项的名称不能为空`
+                    });
+                }
+
+                // 验证价格
+                if (specOption.price === undefined || specOption.price === null) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: `规格选项缺少必填字段：price`
+                    });
+                }
+
+                const priceNum = parseFloat(specOption.price);
+                if (isNaN(priceNum) || priceNum <= 0) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: `第${i + 1}个规格选项"${specOption.name}"的价格必须大于0`
+                    });
+                }
+
+                if (priceNum > 999999.99) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: `第${i + 1}个规格选项"${specOption.name}"的价格不能超过999999.99`
+                    });
+                }
+
+                // 验证库存
+                if (specOption.stock === undefined || specOption.stock === null) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: `规格选项缺少必填字段：stock`
+                    });
+                }
+
+                const stockNum = Number(specOption.stock);
+                if (isNaN(stockNum) || !Number.isInteger(stockNum) || stockNum < 0) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: `第${i + 1}个规格选项"${specOption.name}"的库存必须大于等于0`
+                    });
+                }
+            }
+        } else {
+            // 当不开启规格时，specs 应为 null 或不传
+            if (specs !== null && specs !== undefined) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "未开启规格时，specs 字段应为 null 或不传"
+                });
+            }
+        }
+
+        // 8. 生成商品ID
         const { v4: uuidv4 } = await import('uuid');
         const goodsId = uuidv4();
 
-        // 8. 创建商品记录
+        // 9. 创建商品记录
         await Goods.create({
             goods_id: goodsId,
             user_id: userId,
@@ -170,10 +251,30 @@ router.post('/publish', async (req, res) => {
             group_buy_enabled: groupBuyEnabled || false,
             group_buy_count: groupBuyEnabled ? Number(groupBuyCount) : null,
             group_buy_discount: groupBuyEnabled ? parseFloat(groupBuyDiscount.toFixed(2)) : null,
+            spec_enabled: specEnabledValue,
             create_time: new Date().getTime()
         });
 
-        // 9. 返回成功响应
+        // 10. 如果开启了规格，创建规格选项
+        if (specEnabledValue && specs && specs.length > 0) {
+            for (let i = 0; i < specs.length; i++) {
+                const specOption = specs[i];
+                const specOptionId = uuidv4();
+
+                // 创建规格选项
+                await SpecOption.create({
+                    spec_option_id: specOptionId,
+                    goods_id: goodsId,
+                    name: specOption.name.trim(),
+                    price: parseFloat(parseFloat(specOption.price).toFixed(2)),
+                    stock: Number(specOption.stock),
+                    sort_order: i,
+                    created_at: new Date().getTime()
+                });
+            }
+        }
+
+        // 11. 返回成功响应
         res.json({
             msg: "success",
             data: {

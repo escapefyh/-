@@ -1,0 +1,65 @@
+<!--pages/addresslist/addresslist.wxml-->
+<view class="address-list-page">
+  <!-- 地址列表 -->
+  <view class="address-list" wx:if="{{addressList.length > 0}}">
+    <view 
+      class="address-item {{item.is_default ? 'default' : ''}} {{isManageMode ? 'manage-mode' : ''}}"
+      wx:for="{{addressList}}"
+      wx:key="address_id"
+      bindtap="{{isManageMode ? '' : 'onEditAddress'}}"
+      data-address-id="{{item.address_id}}"
+    >
+      <view class="address-header">
+        <view class="address-user-info">
+          <view class="address-icon">淘</view>
+          <view class="address-user">
+            <text class="address-name">{{item.contact_name}}</text>
+            <text class="address-phone">{{item.phone}}</text>
+            <view class="default-badge" wx:if="{{item.is_default}}">
+              <text>默认</text>
+            </view>
+          </view>
+        </view>
+        <view class="address-actions">
+          <view 
+            class="address-edit-btn" 
+            wx:if="{{!isManageMode}}"
+            catchtap="onEditAddress" 
+            data-address-id="{{item.address_id}}"
+          >
+            <text class="edit-icon">✎</text>
+          </view>
+          <view 
+            class="address-delete-btn" 
+            wx:if="{{isManageMode}}"
+            catchtap="onDeleteAddress" 
+            data-address-id="{{item.address_id}}"
+            data-contact-name="{{item.contact_name}}"
+          >
+            <text>删除</text>
+          </view>
+        </view>
+      </view>
+      <view class="address-content">
+        <text class="address-text">{{item.region}}{{item.detail_address}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:else>
+    <text>暂无收货地址</text>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-actions">
+    <view class="action-btn manage-btn" bindtap="onManage">
+      <text>{{isManageMode ? '完成' : '管理'}}</text>
+    </view>
+    <view class="action-btn add-btn" bindtap="onAddAddress" wx:if="{{!isManageMode}}">
+      <text>+ 添加收货地址</text>
+    </view>
+  </view>
+</view>
+
+
