@@ -1,5 +1,6 @@
 {
-  "darkmode": true,
+  "darkmode": false,  
+  "__备注1__": "这是深色模式开关",
   "pages": [
     "pages/login/login",
     "pages/register/register",

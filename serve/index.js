@@ -32,6 +32,7 @@ const groupBuyRoutes = require('./routes/groupBuy');
 const favoriteRoutes = require('./routes/favorite');
 const chatRoutes = require('./routes/chat');
 const addressRoutes = require('./routes/address');
+const recognizeRoutes = require('./routes/recognize');
 
 // 注册路由
 app.use('/', authRoutes);              // /register, /login
@@ -47,6 +48,7 @@ app.use('/groupBuy', groupBuyRoutes);  // /groupBuy/getCurrentCount, /groupBuy/c
 app.use('/favorite', favoriteRoutes);  // /favorite/toggle
 app.use('/chat', chatRoutes);          // /chat/create
 app.use('/address', addressRoutes);   // /address/list, /address/detail, /address/add, /address/update, /address/delete, /address/setDefault
+app.use('/', recognizeRoutes);        // /recognize
 
 // 启动服务
 app.listen(3000,() => {

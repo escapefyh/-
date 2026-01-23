@@ -23,7 +23,7 @@ Page({
     categoryList: [
       { 
         category_id: 1, 
-        name: '美食生鲜',
+        name: '水果蔬菜',
         image: '/assets/Delicious_Fresh_Food.png'
       },
       { 
@@ -464,6 +464,21 @@ Page({
     wx.navigateTo({
       url: `/pages/goodsdetail/goodsdetail?goods_id=${goods_id}`
     });
+  },
+
+  /**
+   * 图片加载错误处理
+   */
+  onImageError(e) {
+    const index = e.currentTarget.dataset.index;
+    const goodsList = this.data.goodsList;
+    if (goodsList[index]) {
+      // 将失败的图片替换为默认图片
+      goodsList[index].images[0] = '/assets/store.png';
+      this.setData({
+        goodsList: goodsList
+      });
+    }
   },
 
   /**

@@ -23,15 +23,26 @@
         </view>
       </view>
       <view class="image-preview" wx:if="{{images.length > 0}}">
-        <image 
+        <view 
           wx:for="{{images}}" 
           wx:key="index" 
-          class="preview-image" 
-          src="{{item}}" 
-          mode="aspectFill"
-          bind:tap="onPreviewImage"
-          data-index="{{index}}"
-        />
+          class="preview-image-wrapper"
+        >
+          <image 
+            class="preview-image" 
+            src="{{item}}" 
+            mode="aspectFill"
+            bind:tap="onPreviewImage"
+            data-index="{{index}}"
+          />
+          <view 
+            class="delete-image-btn" 
+            catchtap="onDeleteImage"
+            data-index="{{index}}"
+          >
+            <text class="delete-icon">×</text>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -50,7 +61,10 @@
     <view class="category-section" catchtap="onCategoryClick">
       <view class="category-label">分类</view>
       <view class="category-value">
-        <text class="category-text {{!selectedCategoryName ? 'placeholder' : ''}}">{{selectedCategoryName || '请选择商品分类'}}</text>
+        <view class="category-text-wrapper">
+          <text class="category-text {{!selectedCategoryName ? 'placeholder' : ''}}">{{selectedCategoryName || '请选择商品分类'}}</text>
+          <text class="auto-detected-tag" wx:if="{{autoDetectedCategory}}">（已自动识别）</text>
+        </view>
         <text class="category-arrow">›</text>
       </view>
     </view>

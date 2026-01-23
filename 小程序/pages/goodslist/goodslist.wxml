@@ -26,11 +26,14 @@
           class="goods-image" 
           src="{{item.images[0]}}" 
           mode="aspectFill"
+          binderror="onImageError"
+          data-index="{{index}}"
+          lazy-load="{{true}}"
         />
         <image 
           wx:else
           class="goods-image" 
-          src="/assets/default_goods.png" 
+          src="/assets/store.png" 
           mode="aspectFill"
         />
         <view wx:if="{{item.group_buy_enabled}}" class="group-buy-badge">

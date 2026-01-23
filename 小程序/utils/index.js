@@ -113,5 +113,44 @@ const removeUserinfo = (user_id) => {
   wx.removeStorageSync(key);
 };
 
+/**
+ * 调用图片识别API识别商品分类
+ * @param {string} filePath 本地图片文件路径
+ * @returns {Promise<Object>} 返回识别结果 {category_id, category_name, confidence}
+ */
+const recognizeImage = (filePath) => {
+  const base_url = 'http://localhost:3000';
+  return new Promise((resolve, reject) => {
+    wx.uploadFile({
+      url: `${base_url}/recognize`,
+      filePath: filePath,
+      name: 'image', // 表单字段名，必须为 'image'
+      success: (res) => {
+        try {
+          const result = JSON.parse(res.data);
+          
+          // 检查是否有错误
+          if (result.error) {
+            reject(new Error(result.message || result.error));
+            return;
+          }
+          
+          // 返回识别结果
+          resolve({
+            category_id: result.category_id,
+            category_name: result.category_name,
+            confidence: result.confidence
+          });
+        } catch (e) {
+          reject(new Error('解析识别结果失败：' + e.message));
+        }
+      },
+      fail: (err) => {
+        reject(new Error('网络请求失败：' + (err.errMsg || '未知错误')));
+      }
+    });
+  });
+};
+
 // 使用 ES6 导出方式，支持 import 语法
-export { ajax, uploadToOSS, getUserinfo, setUserinfo, removeUserinfo };
+export { ajax, uploadToOSS, getUserinfo, setUserinfo, removeUserinfo, recognizeImage };

@@ -20,12 +20,15 @@
     >
       <!-- 商品图片 -->
       <view class="goods-image-wrapper">
-        <image 
-          wx:if="{{item.images && item.images.length > 0}}"
-          class="goods-image" 
-          src="{{item.images[0]}}" 
-          mode="aspectFill"
-        />
+          <image 
+            wx:if="{{item.images && item.images.length > 0}}"
+            class="goods-image" 
+            src="{{item.images[0]}}" 
+            mode="aspectFill"
+            binderror="onImageError"
+            data-index="{{index}}"
+            lazy-load="{{true}}"
+          />
         <image 
           wx:else
           class="goods-image" 

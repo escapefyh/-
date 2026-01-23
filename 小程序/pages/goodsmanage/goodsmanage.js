@@ -330,6 +330,21 @@ Page({
    */
   onShareAppMessage() {
 
+  },
+
+  /**
+   * 图片加载错误处理
+   */
+  onImageError(e) {
+    const index = e.currentTarget.dataset.index;
+    const goodsList = this.data.goodsList;
+    if (goodsList[index] && goodsList[index].images && goodsList[index].images.length > 0) {
+      // 将失败的图片替换为默认图片
+      goodsList[index].images[0] = '/assets/store.png';
+      this.setData({
+        goodsList: goodsList
+      });
+    }
   }
 })
 

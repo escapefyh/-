@@ -1,8 +1,7 @@
 // pages/sellgoods/sellgoods.js
-import { ajax, uploadToOSS } from '../../utils/index'
+import { ajax, uploadToOSS, recognizeImage } from '../../utils/index'
 
 Page({
-
   /**
    * 页面的初始数据
    */
@@ -16,10 +15,10 @@ Page({
     uploading: false,
     showCategoryModal: false, // 是否显示分类选择弹窗
     specEnabled: false, // 是否开启规格
-    specOptions: [], // SKU选项列表，每个选项包含：name（规格名称）、price（价格）、stock（库存）
+    specOptions: [], // SKU选项列表
     // 商品分类列表
     categoryList: [
-      { category_id: 1, name: '美食生鲜' },
+      { category_id: 1, name: '水果蔬菜' },
       { category_id: 2, name: '美妆个护' },
       { category_id: 3, name: '家居百货' },
       { category_id: 4, name: '数码家电' },
@@ -35,7 +34,9 @@ Page({
     ],
     categoryIndex: -1, // 选中的分类索引
     selectedCategoryId: null, // 选中的分类ID
-    selectedCategoryName: '' // 选中的分类名称
+    selectedCategoryName: '', // 选中的分类名称
+    isRecognizing: false, // 是否正在识别图片
+    autoDetectedCategory: false // 是否自动检测到的分类（用于显示提示）
   },
 
   /**
@@ -65,7 +66,7 @@ Page({
       });
       return;
     }
-
+    //.trim()：这是一个非常实用的字符串功能，叫 “去除首尾空格”。
     const description = this.data.description.trim();
     if (!description) {
       wx.showToast({
@@ -91,6 +92,12 @@ Page({
       return;
     }
 
+    /*
+    作用：它会把括号里的文本，强行翻译成数字。
+    parseFloat('99.9') -> 变成数字 99.9
+    parseFloat('100') -> 变成数字 100
+    icon：none   意思：只显示文字，不要图标。
+    */
     const price = parseFloat(this.data.price);
     if (!price || price <= 0) {
       wx.showToast({
@@ -195,7 +202,7 @@ Page({
       // 显示上传进度
       wx.showLoading({
         title: '上传图片中...',
-        mask: true
+        mask: true   //在上传时，不让用户点击到其他地方
       });
 
       // 获取用户ID（从登录接口获取，用于上传图片）
@@ -293,7 +300,7 @@ Page({
   },
 
   /**
-   * 上传图片
+   * 上传图片（包含自动AI识别逻辑）
    */
   onUploadImage() {
     const that = this;
@@ -303,11 +310,20 @@ Page({
       sourceType: ['album', 'camera'], // 相册和相机
       sizeType: ['compressed'], // 压缩图片
       success(res) {
-        // wx.chooseMedia 返回的是 tempFiles 数组，每个元素有 tempFilePath
+        // 1. 获取新选的图片
         const tempFilePaths = res.tempFiles.map(file => file.tempFilePath);
+        
+        // 2. 更新到界面上
+        const newImages = [...that.data.images, ...tempFilePaths];
         that.setData({
-          images: [...that.data.images, ...tempFilePaths]
+          images: newImages
         });
+        
+        // 3. 关键逻辑修正：只要当前“还没选中分类”且“上传了图片”，就触发识别
+        // 注意：这里我们使用 tempFilePaths[0] (本次新传的第一张) 进行识别
+        if (!that.data.selectedCategoryId && tempFilePaths.length > 0) {
+          that.recognizeCategory(tempFilePaths[0]);
+        }
       },
       fail(err) {
         console.error('选择图片失败:', err);
@@ -324,6 +340,106 @@ Page({
       current: this.data.images[index],
       urls: this.data.images
     });
+  },
+
+  /**
+   * 删除图片
+   */
+  onDeleteImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const that = this;
+    
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这张图片吗？',
+      success(res) {
+        if (res.confirm) {
+          const images = [...that.data.images];
+          images.splice(index, 1);
+          that.setData({
+            images: images
+          });
+          
+          // 如果删除的是第一张图片，且当前分类是自动识别的，清除分类选择
+          // 这样用户可以重新上传图片进行识别
+          if (index === 0 && that.data.autoDetectedCategory && images.length === 0) {
+            that.setData({
+              selectedCategoryId: null,
+              selectedCategoryName: '',
+              categoryIndex: -1,
+              autoDetectedCategory: false
+            });
+          }
+        }
+      }
+    });
+  },
+
+  /**
+   * 识别商品分类
+   */
+  async recognizeCategory(imagePath) {
+    // 如果已经有分类了，不自动识别（防止覆盖用户手动选择）
+    if (this.data.selectedCategoryId) {
+      return;
+    }
+
+    this.setData({
+      isRecognizing: true
+    });
+
+    try {
+      wx.showLoading({
+        title: '正在识别商品分类...',
+        mask: true
+      });
+
+      // 调用识别接口
+      const result = await recognizeImage(imagePath);
+      
+      wx.hideLoading();
+
+      // 自动填充分类
+      const categoryIndex = this.data.categoryList.findIndex(
+        cat => cat.category_id === result.category_id
+      );
+
+      if (categoryIndex >= 0) {
+        this.setData({
+          selectedCategoryId: result.category_id,
+          selectedCategoryName: result.category_name,
+          categoryIndex: categoryIndex,
+          autoDetectedCategory: true // 标记为自动识别
+        });
+
+        // 显示识别成功提示
+        wx.showToast({
+          title: `已识别为：${result.category_name}`,
+          icon: 'success',
+          duration: 2000
+        });
+      } else {
+        wx.showToast({
+          title: '未能识别分类，请手动选择',
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('图片识别失败:', error);
+      
+      // 显示识别失败提示（不影响用户继续操作）
+      wx.showToast({
+        title: error.message || '识别失败，请手动选择分类',
+        icon: 'none',
+        duration: 2000
+      });
+    } finally {
+      this.setData({
+        isRecognizing: false
+      });
+    }
   },
 
   /**
@@ -433,7 +549,8 @@ Page({
       categoryIndex: index,
       selectedCategoryId: categoryId,
       selectedCategoryName: categoryName,
-      showCategoryModal: false
+      showCategoryModal: false,
+      autoDetectedCategory: false // 用户手动选择后，清除自动识别标记
     });
     
     // 显示选中的分类
@@ -557,56 +674,5 @@ Page({
    */
   onLoad(options) {
     // 确保 categoryList 已初始化
-    console.log('页面加载，分类列表:', this.data.categoryList);
-    console.log('分类列表长度:', this.data.categoryList ? this.data.categoryList.length : 0);
   },
-
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
-  onReady() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide() {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload() {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh() {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-   */
-  onReachBottom() {
-
-  },
-
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage() {
-
-  }
 })
