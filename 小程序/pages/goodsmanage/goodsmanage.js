@@ -62,9 +62,9 @@ Page({
         {}
       );
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
-        const total = result.data.data?.total || 0;
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
 
         // 处理每个商品
         const processedList = list.map(item => {
@@ -85,9 +85,9 @@ Page({
           loading: false
         });
       } else {
-        console.error('API返回错误:', result.data);
+        console.error('API返回错误:', result);
         wx.showToast({
-          title: result.data?.error || result.data?.msg || '获取商品列表失败',
+          title: result?.error || result?.msg || '获取商品列表失败',
           icon: 'none',
           duration: 3000
         });
@@ -208,7 +208,7 @@ Page({
 
       wx.hideLoading();
 
-      if (result.data?.msg === 'success') {
+      if (result?.msg === 'success') {
         wx.showToast({
           title: '更新成功',
           icon: 'success'
@@ -221,7 +221,7 @@ Page({
         this.loadMyGoodsList(true);
       } else {
         wx.showToast({
-          title: result.data?.error || '更新失败',
+          title: result?.error || '更新失败',
           icon: 'none'
         });
       }
@@ -253,7 +253,7 @@ Page({
               user_id: user_id
             });
 
-            if (result.data?.msg === 'success') {
+            if (result?.msg === 'success') {
               wx.showToast({
                 title: '删除成功',
                 icon: 'success'
@@ -262,7 +262,7 @@ Page({
               this.loadMyGoodsList(true);
             } else {
               wx.showToast({
-                title: result.data?.error || '删除失败',
+                title: result?.error || '删除失败',
                 icon: 'none'
               });
             }

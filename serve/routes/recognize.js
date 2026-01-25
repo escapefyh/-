@@ -12,6 +12,13 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+/*{ recursive: true } 
+含义：递归创建。
+场景：假设你要创建 a/b/c。
+如果不加这个参数：必须保证 a 和 b 已经存在，否则报错。
+加了这个参数：不管 a 和 b 有没有，它会一口气帮你把 a、b、c 全都建好。哪怕路径很深，它也能搞定。
+*/
+
 // 配置 multer（用于接收文件，临时存储）
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {

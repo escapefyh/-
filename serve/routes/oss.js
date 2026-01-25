@@ -11,7 +11,13 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+//在js里面，函数也是一个对象，可以写成multer.diskStorage这样的形式（区别于c语言）
 // 配置 multer（仅用于接收文件，临时存储）
+/*destination: function   这相当于c语言里面的回调函数（函数里面调用函数）
+destination它本身是一个函数，这个函数里面调用了cb这个函数
+在js语法中，一个函数的参数可以是另一个函数。
+这有三个函数，分别是diskStorage，function ，cb
+*/
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, uploadDir);
@@ -23,7 +29,13 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + ext);
     }
 });
-
+/*
+const upload = multer对于这个的理解，如果放到c语言里面，
+可以理解成upload是一个指针，指向multer返回的那一堆东西（这些东西放到了一个结构体里面）
+upload是指向这个结构体的指针。
+这个multer是别人已经写好的函数，最后会返回一个指针，我这里用upload接住了
+至于后面还用到了upload.single  这个其实是结构体里面本身就有的东西。
+*/
 const upload = multer({
     storage: storage,
     limits: {
@@ -199,10 +211,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         // 返回OSS图片URL
         res.json({
             url: result.url,
-            data: {
-                url: result.url,
-                imageUrl: result.url
-            }
+            msg: "success"
         });
     } catch (error) {
         console.log('OSS上传失败:', error);

@@ -88,8 +88,8 @@ Page({
               avatar: avatarUrl
             });
 
-            if (avatarResult.data?.msg !== 'success') {
-              console.warn('更新头像到数据库失败:', avatarResult.data?.error);
+            if (avatarResult?.msg !== 'success') {
+              console.warn('更新头像到数据库失败:', avatarResult?.error);
               // 即使更新失败，也继续使用上传后的OSS URL
             }
           } catch (uploadError) {
@@ -109,8 +109,8 @@ Page({
               user_id: user_id,
               avatar: avatarUrl
             });
-            if (avatarResult.data?.msg !== 'success') {
-              console.warn('更新头像到数据库失败:', avatarResult.data?.error);
+            if (avatarResult?.msg !== 'success') {
+              console.warn('更新头像到数据库失败:', avatarResult?.error);
             }
           } catch (error) {
             console.warn('更新头像到数据库失败:', error);
@@ -126,7 +126,7 @@ Page({
 
         wx.hideLoading();
 
-        if (result.data?.msg === 'success') {
+        if (result?.msg === 'success') {
           // 更新本地存储的用户信息
           const userInfo = wx.getStorageSync('userInfo') || {};
           userInfo.nickname = nickname.trim();
@@ -153,7 +153,7 @@ Page({
           }, 1500);
         } else {
           wx.showToast({
-            title: result.data?.error || '保存失败',
+            title: result?.error || '保存失败',
             icon: 'none'
           });
         }

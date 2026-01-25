@@ -60,8 +60,8 @@ Page({
       
       wx.hideLoading();
 
-      if (result.data?.msg === 'success') {
-        const address = result.data.data || {};
+      if (result?.msg === 'success') {
+        const address = result.data || {};
         this.setData({
           contactName: address.contact_name || '',
           phone: address.phone || '',
@@ -76,7 +76,7 @@ Page({
         });
       } else {
         wx.showToast({
-          title: result.data?.error || '加载失败',
+          title: result?.error || '加载失败',
           icon: 'none'
         });
       }
@@ -238,7 +238,7 @@ Page({
 
       wx.hideLoading();
 
-      if (result.data?.msg === 'success') {
+      if (result?.msg === 'success') {
         wx.showToast({
           title: '保存成功',
           icon: 'success'
@@ -248,7 +248,7 @@ Page({
         }, 1500);
       } else {
         wx.showToast({
-          title: result.data?.error || '保存失败',
+          title: result?.error || '保存失败',
           icon: 'none'
         });
       }

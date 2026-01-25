@@ -67,8 +67,8 @@ Page({
   async loadTargetUserInfo() {
     try {
       const result = await ajax(`/user/info?user_id=${this.data.targetUserId}`, 'GET', {});
-      if (result.data?.msg === 'success') {
-        const userInfo = result.data.data || {};
+      if (result?.msg === 'success') {
+        const userInfo = result.data || {};
         this.setData({
           targetUserInfo: {
             user_id: userInfo.user_id,
@@ -92,8 +92,8 @@ Page({
   async loadGoodsInfo() {
     try {
       const result = await ajax(`/goods/detail?goods_id=${this.data.goodsId}`, 'GET', {});
-      if (result.data?.msg === 'success') {
-        const goods = result.data.data?.goods || {};
+      if (result?.msg === 'success') {
+        const goods = result.data?.goods || {};
         this.setData({
           goodsInfo: {
             goods_id: goods.goods_id,
@@ -142,7 +142,7 @@ Page({
         target_user_id: this.data.targetUserId
       });
 
-      if (result.data?.msg === 'success') {
+      if (result?.msg === 'success') {
         console.log('消息已标记为已读');
         // 标记成功后，通知消息列表页面刷新（如果存在）
         // 通过事件总线或页面栈来实现
@@ -158,7 +158,7 @@ Page({
         // 更新tabBar角标
         this.updateUnreadMessageBadge();
       } else {
-        console.warn('标记消息为已读失败:', result.data?.error);
+        console.warn('标记消息为已读失败:', result?.error);
       }
     } catch (error) {
       console.error('标记消息为已读失败:', error);
@@ -197,9 +197,9 @@ Page({
         {}
       );
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
-        const total = result.data.data?.total || 0;
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
 
         // 处理消息列表，按时间排序
         const processedList = list.map(item => ({
@@ -229,7 +229,7 @@ Page({
         this.scrollToBottom();
       } else {
         wx.showToast({
-          title: result.data?.error || '加载消息失败',
+          title: result?.error || '加载消息失败',
           icon: 'none'
         });
         this.setData({ loading: false });
@@ -286,12 +286,12 @@ Page({
         goods_id: this.data.goodsId || null
       });
 
-      if (result.data?.msg === 'success') {
+      if (result?.msg === 'success') {
         // 发送成功，重新加载最新消息
         this.loadChatMessages(true);
       } else {
         wx.showToast({
-          title: result.data?.error || '发送失败',
+          title: result?.error || '发送失败',
           icon: 'none'
         });
         // 恢复输入框内容
@@ -389,8 +389,8 @@ Page({
 
     try {
       const result = await ajax(`/chat/unreadCount?user_id=${user_id}`, 'GET', {});
-      if (result.data?.msg === 'success') {
-        const unreadCount = result.data.data?.unread_count || 0;
+      if (result?.msg === 'success') {
+        const unreadCount = result.data?.unread_count || 0;
         if (unreadCount > 0) {
           // 显示角标，最多显示99+
           wx.setTabBarBadge({

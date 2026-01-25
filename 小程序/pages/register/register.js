@@ -77,8 +77,7 @@ async register(){
   try {
     const result = await ajax('/register','POST', params);
     // 后端返回的数据结构：{ msg: "registered" | "success" | "error" }
-    // 数据在 result.data 中
-    const msg = result.data?.msg;
+    const msg = result?.msg;
     if (msg === "registered") {
       wx.showToast({
         title: '该账号已注册',

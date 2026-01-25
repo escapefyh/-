@@ -46,8 +46,8 @@ Page({
     try {
       const result = await ajax(`/chat/list?user_id=${user_id}`, 'GET', {});
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
         
         console.log('聊天列表原始数据:', list);
         
@@ -119,7 +119,7 @@ Page({
         });
       } else {
         wx.showToast({
-          title: result.data?.error || '加载聊天列表失败',
+          title: result?.error || '加载聊天列表失败',
           icon: 'none'
         });
         this.setData({ loading: false });
@@ -278,8 +278,8 @@ Page({
 
     try {
       const result = await ajax(`/chat/unreadCount?user_id=${user_id}`, 'GET', {});
-      if (result.data?.msg === 'success') {
-        const unreadCount = result.data.data?.unread_count || 0;
+      if (result?.msg === 'success') {
+        const unreadCount = result.data?.unread_count || 0;
         if (unreadCount > 0) {
           // 显示角标，最多显示99+
           wx.setTabBarBadge({

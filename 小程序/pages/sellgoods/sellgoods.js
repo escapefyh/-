@@ -265,8 +265,8 @@ Page({
 
       // 调用发布接口
       const result = await ajax('/goods/publish', 'POST', goodsData);
-      const msg = result.data?.msg;
-      const error = result.data?.error;
+      const msg = result?.msg;
+      const error = result?.error;
 
       wx.hideLoading();
 

@@ -15,6 +15,7 @@ Page({
     this.setData({
       account:e.detail.value
     })
+    console.log(e)
   },
 
   getpassword(e){
@@ -53,11 +54,11 @@ Page({
       const result = await ajax('/login','POST', params);
       
       // 后端返回的数据结构：{ msg: "success" | "accountError" | "error", result?: {...} }
-      const msg = result.data?.msg;
+      const msg = result?.msg;
       
       if (msg === "success") {
         // 登录成功，保存用户信息
-        const userInfo = result.data?.result;
+        const userInfo = result?.result;
         if (userInfo && userInfo.user_id) {
           const user_id = userInfo.user_id;
           

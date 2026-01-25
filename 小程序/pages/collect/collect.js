@@ -64,9 +64,9 @@ Page({
         {}
       );
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
-        const total = result.data.data?.total || 0;
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
 
         // 处理每个商品，保证 images 为数组
         const processedList = list.map(item => {
@@ -87,9 +87,9 @@ Page({
           loading: false
         });
       } else {
-        console.error('获取收藏列表失败:', result.data);
+        console.error('获取收藏列表失败:', result);
         wx.showToast({
-          title: result.data?.error || result.data?.msg || '获取收藏列表失败',
+          title: result?.error || result?.msg || '获取收藏列表失败',
           icon: 'none'
         });
         this.setData({ loading: false });

@@ -75,11 +75,10 @@ Page({
       const result = await ajax(`/goods/detail?goods_id=${this.data.goods_id}`, 'GET', {});
       
       console.log('商品详情API返回结果:', result);
-      console.log('商品详情API返回的data:', result.data);
       
-      if (result.data?.msg === 'success') {
-        const goods = result.data.data?.goods || {};
-        let seller = result.data.data?.seller || {};
+      if (result?.msg === 'success') {
+        const goods = result.data?.goods || {};
+        let seller = result.data?.seller || {};
         
         console.log('商品信息:', goods);
         console.log('卖家信息（原始）:', seller);
@@ -179,9 +178,9 @@ Page({
         this.loadCommentCount();
         this.loadFavoriteCount();
       } else {
-        console.error('API返回错误:', result.data);
+        console.error('API返回错误:', result);
         wx.showToast({
-          title: result.data?.error || result.data?.msg || '获取商品详情失败',
+          title: result?.error || result?.msg || '获取商品详情失败',
           icon: 'none',
           duration: 3000
         });
@@ -237,8 +236,8 @@ Page({
     try {
       const result = await ajax(`/groupBuy/getCurrentCount?goods_id=${this.data.goods_id}`, 'GET', {});
       
-      if (result.data?.msg === 'success') {
-        const count = result.data.data?.count || 0;
+      if (result?.msg === 'success') {
+        const count = result.data?.count || 0;
         this.setData({
           currentGroupCount: count
         });
@@ -307,8 +306,8 @@ Page({
     try {
       const result = await ajax(`/goods/getCommentCount?goods_id=${this.data.goods_id}`, 'GET', {});
       
-      if (result.data?.msg === 'success') {
-        const count = result.data.data?.count || 0;
+      if (result?.msg === 'success') {
+        const count = result.data?.count || 0;
         this.setData({
           commentCount: count
         });
@@ -334,9 +333,9 @@ Page({
         {}
       );
 
-      if (result.data?.msg === 'success') {
-        const count = result.data.data?.count || 0;
-        const isFavorited = !!result.data.data?.is_favorited;
+      if (result?.msg === 'success') {
+        const count = result.data?.count || 0;
+        const isFavorited = !!result.data?.is_favorited;
         this.setData({
           favoriteCount: count,
           isFavorited
@@ -382,8 +381,8 @@ Page({
     // 调用后端接口切换收藏状态
     ajax('/favorite/toggle', 'POST', { user_id, goods_id })
       .then(res => {
-        if (res.data?.msg === 'success') {
-          const data = res.data.data || {};
+        if (res?.msg === 'success') {
+          const data = res.data || {};
           const nextFavorited = typeof data.is_favorited === 'boolean'
             ? data.is_favorited
             : !isFavorited;
@@ -402,7 +401,7 @@ Page({
           });
         } else {
           wx.showToast({
-            title: res.data?.error || '收藏操作失败',
+            title: res?.error || '收藏操作失败',
             icon: 'none'
           });
         }

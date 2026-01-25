@@ -52,14 +52,14 @@ Page({
       
       wx.hideLoading();
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
         this.setData({
           addressList: list
         });
       } else {
         wx.showToast({
-          title: result.data?.error || '加载失败',
+          title: result?.error || '加载失败',
           icon: 'none'
         });
       }
@@ -148,7 +148,7 @@ Page({
 
       wx.hideLoading();
 
-      if (result.data?.msg === 'success') {
+      if (result?.msg === 'success') {
         wx.showToast({
           title: '删除成功',
           icon: 'success'
@@ -159,7 +159,7 @@ Page({
         }, 1500);
       } else {
         wx.showToast({
-          title: result.data?.error || '删除失败',
+          title: result?.error || '删除失败',
           icon: 'none'
         });
       }

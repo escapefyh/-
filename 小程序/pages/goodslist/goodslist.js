@@ -73,9 +73,9 @@ Page({
         {}
       );
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
-        const total = result.data.data?.total || 0;
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
 
         console.log('获取到的商品列表:', list);
         console.log('商品总数:', total);
@@ -109,9 +109,9 @@ Page({
           loading: false
         });
       } else {
-        console.error('API返回错误:', result.data);
+        console.error('API返回错误:', result);
         wx.showToast({
-          title: result.data?.error || result.data?.msg || '获取商品列表失败',
+          title: result?.error || result?.msg || '获取商品列表失败',
           icon: 'none',
           duration: 3000
         });

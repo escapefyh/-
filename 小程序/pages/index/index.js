@@ -284,12 +284,10 @@ Page({
 
       console.log('=== 搜索API返回结果 ===');
       console.log('完整返回:', result);
-      console.log('返回状态码:', result.statusCode);
-      console.log('返回数据:', result.data);
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
-        const total = result.data.data?.total || 0;
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
 
         console.log('=== 搜索结果 ===');
         console.log('搜索到的商品数量:', list.length);
@@ -339,17 +337,17 @@ Page({
         });
       } else {
         console.error('=== 搜索API返回错误 ===');
-        console.error('错误信息:', result.data);
-        console.error('错误详情:', JSON.stringify(result.data));
+        console.error('错误信息:', result);
+        console.error('错误详情:', JSON.stringify(result));
         
         // 检查是否是后端没有实现搜索接口，返回了所有商品
-        if (result.data?.data?.list && result.data?.data?.list.length > 0) {
+        if (result?.data?.list && result?.data?.list.length > 0) {
           console.warn('⚠️ 警告：搜索接口可能返回了所有商品，而不是搜索结果！');
           console.warn('请检查后端是否正确实现了 /goods/search 接口');
         }
         
         wx.showToast({
-          title: result.data?.error || result.data?.msg || '搜索失败',
+          title: result?.error || result?.msg || '搜索失败',
           icon: 'none',
           duration: 3000
         });
@@ -400,11 +398,10 @@ Page({
       );
 
       console.log('API返回结果:', result);
-      console.log('API返回的data:', result.data);
 
-      if (result.data?.msg === 'success') {
-        const list = result.data.data?.list || [];
-        const total = result.data.data?.total || 0;
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
 
         console.log('获取到的商品列表:', list);
         console.log('商品总数:', total);
@@ -436,9 +433,9 @@ Page({
           loading: false
         });
       } else {
-        console.error('API返回错误:', result.data);
+        console.error('API返回错误:', result);
         wx.showToast({
-          title: result.data?.error || result.data?.msg || '获取商品列表失败',
+          title: result?.error || result?.msg || '获取商品列表失败',
           icon: 'none',
           duration: 3000
         });
@@ -608,8 +605,8 @@ Page({
 
     try {
       const result = await ajax(`/chat/unreadCount?user_id=${user_id}`, 'GET', {});
-      if (result.data?.msg === 'success') {
-        const unreadCount = result.data.data?.unread_count || 0;
+      if (result?.msg === 'success') {
+        const unreadCount = result.data?.unread_count || 0;
         if (unreadCount > 0) {
           // 显示角标，最多显示99+
           wx.setTabBarBadge({
