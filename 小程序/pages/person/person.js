@@ -46,51 +46,11 @@ Page({
   },
 
   /**
-   * 跳转到地址管理页面
+   * 跳转到设置页面
    */
-  goToAddressManage() {
+  goToSettings() {
     wx.navigateTo({
-      url: '../addresslist/addresslist'
-    });
-  },
-
-  toquit(){
-    // 显示确认对话框
-    wx.showModal({
-      title: '提示',
-      content: '确定要退出登录吗？',
-      success: (res) => {
-        if (res.confirm) {
-          // 获取当前登录的user_id
-          const currentUserId = wx.getStorageSync('user_id');
-          
-          // 清除登录相关的信息
-          // 注意：不清除 userinfo_{user_id}，这样下次登录该账号时可以恢复微信授权信息
-          wx.removeStorageSync('user_id');
-          wx.removeStorageSync('userInfo');
-          wx.removeStorageSync('wxlogin');
-          
-          // 重置页面数据为默认状态
-          this.setData({
-            wxlogin: false,
-            userinfo: undefined
-          });
-          
-          // 显示退出成功提示
-          wx.showToast({
-            title: '已退出登录',
-            icon: 'success',
-            duration: 1500
-          });
-          
-          // 跳转到登录页面（清空页面栈，不能返回）
-          setTimeout(() => {
-            wx.reLaunch({
-              url: '/pages/login/login'
-            });
-          }, 1500);
-        }
-      }
+      url: '../settings/settings'
     });
   },
 

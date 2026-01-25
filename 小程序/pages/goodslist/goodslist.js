@@ -14,7 +14,9 @@ Page({
     loading: false,
     hasMore: true,
     categoryId: null,      // 分类ID（可选）
-    categoryName: ''       // 分类名称（用于显示标题）
+    categoryName: '',      // 分类名称（用于显示标题）
+    searchKeyword: '',     // 搜索关键词
+    isSearching: false     // 是否处于搜索状态
   },
 
   /**
@@ -59,10 +61,17 @@ Page({
     this.setData({ loading: true });
 
     try {
-      // 构建请求URL，如果有分类ID则添加 category_id 参数
+      // 构建请求URL
       let requestUrl = `/goods/list?page=${this.data.page}&pageSize=${this.data.pageSize}`;
+      
+      // 如果有分类ID则添加 category_id 参数
       if (this.data.categoryId) {
         requestUrl += `&category_id=${this.data.categoryId}`;
+      }
+      
+      // 如果有搜索关键词则添加 keyword 参数
+      if (this.data.searchKeyword && this.data.searchKeyword.trim()) {
+        requestUrl += `&keyword=${encodeURIComponent(this.data.searchKeyword.trim())}`;
       }
       
       console.log('请求商品列表，URL:', requestUrl);
@@ -127,6 +136,61 @@ Page({
       });
       this.setData({ loading: false });
     }
+  },
+
+  /**
+   * 搜索输入
+   */
+  onSearchInput(e) {
+    this.setData({
+      searchKeyword: e.detail.value
+    });
+  },
+
+  /**
+   * 搜索确认（回车或点击搜索按钮）
+   */
+  onSearch() {
+    const keyword = this.data.searchKeyword.trim();
+    if (!keyword) {
+      wx.showToast({
+        title: '请输入搜索关键词',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    this.setData({
+      isSearching: true,
+      page: 1,
+      hasMore: true,
+      goodsList: []
+    });
+    
+    this.loadGoodsList(true);
+  },
+
+  /**
+   * 点击搜索按钮
+   */
+  onSearchButtonClick() {
+    this.onSearch();
+  },
+
+  /**
+   * 清除搜索
+   */
+  onSearchClear() {
+    this.setData({
+      searchKeyword: '',
+      isSearching: false,
+      page: 1,
+      hasMore: true,
+      goodsList: []
+    });
+    
+    // 重新加载商品列表（不包含搜索关键词）
+    this.loadGoodsList(true);
   },
 
   /**

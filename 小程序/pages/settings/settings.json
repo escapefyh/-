@@ -1,0 +1,16 @@
+{
+  "navigationBarTitleText": "设置",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}
+
+
+
+
+
+
+
+

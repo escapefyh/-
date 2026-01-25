@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods, Comment, Favorite } = require('../db');
+const { User, Goods, Comment, Favorite, SpecOption } = require('../db');
 
 // 处理图片URL，确保返回完整的OSS URL
 const processImageUrls = (images) => {
@@ -157,24 +157,24 @@ router.get('/detail', async (req, res) => {
     }
 });
 
-// 获取商品列表（包含卖家信息，支持分类筛选）
+// 获取商品列表（包含卖家信息，支持分类筛选和搜索）
 router.get('/list', async (req, res) => {
     try {
-        const { page = 1, pageSize = 20, category_id } = req.query;
+        const { page = 1, pageSize = 20, category_id, keyword } = req.query;
 
         // 1. 参数验证
         const pageNum = parseInt(page) || 1;
         const pageSizeNum = parseInt(pageSize) || 20;
 
         if (pageNum < 1) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
                 error: "页码必须大于0"
             });
         }
 
         if (pageSizeNum < 1 || pageSizeNum > 100) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
                 error: "每页数量必须在1-100之间"
             });
@@ -187,18 +187,27 @@ router.get('/list', async (req, res) => {
         if (category_id !== undefined && category_id !== null && category_id !== '') {
             const categoryIdNum = parseInt(category_id);
             if (isNaN(categoryIdNum)) {
-                return res.status(400).json({
+                return res.status(200).json({
                     msg: "error",
                     error: "分类ID类型错误"
                 });
             }
             if (categoryIdNum < 1 || categoryIdNum > 13 || !Number.isInteger(categoryIdNum)) {
-                return res.status(400).json({
+                return res.status(200).json({
                     msg: "error",
                     error: "分类ID无效，必须在1-13之间"
                 });
             }
             query.category_id = categoryIdNum;
+        }
+
+        // 如果传入了搜索关键词，添加搜索条件（对商品描述进行模糊匹配）
+        if (keyword !== undefined && keyword !== null && keyword !== '') {
+            const searchKeyword = keyword.trim();
+            if (searchKeyword.length > 0) {
+                // 使用正则表达式进行不区分大小写的模糊匹配
+                query.description = { $regex: searchKeyword, $options: 'i' };
+            }
         }
 
         const skip = (pageNum - 1) * pageSizeNum;
@@ -211,7 +220,8 @@ router.get('/list', async (req, res) => {
             .limit(limit)
             .lean();
 
-        // 4. 获取所有卖家ID
+        // 4. 获取所有商品ID和卖家ID
+        const goodsIds = goodsList.map(g => g.goods_id);
         const userIds = [...new Set(goodsList.map(g => g.user_id))];
 
         // 5. 批量查询卖家信息（使用 lean() 提高性能）
@@ -220,14 +230,35 @@ router.get('/list', async (req, res) => {
         sellers.forEach(seller => {
             sellerMap[seller.user_id] = {
                 user_id: seller.user_id,
-                name: seller.name || '',
                 nickname: seller.nickname || '',
-                phone: seller.phone || '',
-                avatar: seller.avatar || ''
+                avatar: processAvatarUrl(seller.avatar || '') // 处理头像URL
             };
         });
 
-        // 6. 组装返回数据
+        // 6. 批量查询规格选项（仅查询开启规格的商品）
+        const specEnabledGoodsIds = goodsList
+            .filter(g => g.spec_enabled)
+            .map(g => g.goods_id);
+        
+        const specOptions = await SpecOption.find({ 
+            goods_id: { $in: specEnabledGoodsIds } 
+        })
+        .sort({ sort_order: 1 })
+        .lean();
+        
+        const specsMap = {};
+        specOptions.forEach(spec => {
+            if (!specsMap[spec.goods_id]) {
+                specsMap[spec.goods_id] = [];
+            }
+            specsMap[spec.goods_id].push({
+                name: spec.name,
+                price: spec.price,
+                stock: spec.stock
+            });
+        });
+
+        // 7. 组装返回数据
         const result = goodsList.map(goods => {
             // 处理图片URL，确保返回完整的OSS URL
             const processedImages = processImageUrls(goods.images);
@@ -235,20 +266,26 @@ router.get('/list', async (req, res) => {
             return {
                 goods_id: goods.goods_id,
                 user_id: goods.user_id,
-                images: processedImages, // 使用处理后的图片URL
                 description: goods.description,
                 price: goods.price,
                 category_id: goods.category_id,
-                sales_count: goods.sales_count || 0,
+                images: processedImages,
                 group_buy_enabled: goods.group_buy_enabled || false,
                 group_buy_count: goods.group_buy_count || null,
                 group_buy_discount: goods.group_buy_discount || null,
-                create_time: goods.create_time,
-                seller: sellerMap[goods.user_id] || {} // 如果用户不存在，返回空对象
+                spec_enabled: goods.spec_enabled || false,
+                specs: goods.spec_enabled ? (specsMap[goods.goods_id] || null) : null,
+                sales_count: goods.sales_count || 0,
+                create_time: formatDateTime(goods.create_time),
+                seller: sellerMap[goods.user_id] || {
+                    user_id: goods.user_id,
+                    nickname: '',
+                    avatar: '/assets/default_avatar.png'
+                }
             };
         });
 
-        // 7. 获取总数（使用相同的查询条件）
+        // 8. 获取总数（使用相同的查询条件）
         const total = await Goods.countDocuments(query);
 
         res.json({
@@ -260,9 +297,9 @@ router.get('/list', async (req, res) => {
         });
     } catch (error) {
         console.log('获取商品列表失败:', error);
-        res.status(500).json({
+        res.status(200).json({
             msg: "error",
-            error: error.message || "服务器错误"
+            error: "获取商品列表失败"
         });
     }
 });

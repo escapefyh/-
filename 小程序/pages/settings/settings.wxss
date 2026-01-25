@@ -1,40 +1,16 @@
-.person-page {
+/* pages/settings/settings.wxss */
+.settings-page {
   min-height: 100vh;
   background-color: #f5f5f5;
   display: flex;
   flex-direction: column;
-}
-
-.info-show {
-  background-color: chartreuse;
-  width: 90%;
-  margin: 40rpx auto 40rpx;
-  display: flex;  
-  justify-content: center;
-  align-items: center;   
-  border-radius: 20rpx;
-  padding: 40rpx 0;
-}
-
-.default-nikename{
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx 0;
-}
-
-.text1{
-  font-weight: bold;
-  font-size: 40rpx;
-}
-
-.text2{
-  font-size: 30rpx;
+  padding-bottom: 120rpx; /* 为底部按钮留出空间 */
 }
 
 /* 功能菜单区域 */
 .menu-section {
   width: 90%;
-  margin: 0 auto;
+  margin: 40rpx auto 0;
   background-color: #fff;
   border-radius: 20rpx;
   overflow: hidden;
@@ -87,8 +63,16 @@
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
-.quitbutton{
+.quitbutton {
   width: 50%;
   margin: 0 auto;
   display: block !important;
 }
+
+
+
+
+
+
+
+

@@ -23,6 +23,18 @@ Page({
       password:e.detail.value
     })
   },
+
+  /**
+   * 密码输入框回车确认事件
+   */
+  onPasswordConfirm(e){
+    // 更新密码值
+    this.setData({
+      password: e.detail.value
+    });
+    // 自动提交表单
+    this.submit();
+  },
   
 
   async submit(){
@@ -122,6 +134,15 @@ Page({
     wx.navigateTo({
       url:'../register/register',
     })
+  },
+
+  /**
+   * 跳转到忘记密码页面
+   */
+  toForgotPassword() {
+    wx.navigateTo({
+      url: '../forgotpassword/forgotpassword'
+    });
   },
 
 

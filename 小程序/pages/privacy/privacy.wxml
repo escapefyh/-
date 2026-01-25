@@ -1,0 +1,42 @@
+<!--pages/privacy/privacy.wxml-->
+<view class="privacy-page">
+  <view class="container">
+    <!-- 标题区域 -->
+    <view class="header-section">
+      <view class="privacy-title">{{privacyTitle || '隐私政策'}}</view>
+      <view class="privacy-date" wx:if="{{publishDate}}">
+        <text>发布日期：{{publishDate}}</text>
+        <text wx:if="{{effectiveDate}}">生效日期：{{effectiveDate}}</text>
+      </view>
+    </view>
+
+    <!-- 内容区域 -->
+    <view class="content-section">
+      <view class="content-text">{{privacyContent || '加载中...'}}</view>
+    </view>
+
+    <!-- 联系方式 -->
+    <view class="contact-section" wx:if="{{contactInfo}}">
+      <view class="content-title">联系我们</view>
+      <view class="contact-item" wx:if="{{contactInfo.email}}">
+        <text class="contact-label">邮箱：</text>
+        <text class="contact-value">{{contactInfo.email}}</text>
+      </view>
+      <view class="contact-item" wx:if="{{contactInfo.phone}}">
+        <text class="contact-label">电话：</text>
+        <text class="contact-value">{{contactInfo.phone}}</text>
+      </view>
+      <view class="contact-item" wx:if="{{contactInfo.address}}">
+        <text class="contact-label">地址：</text>
+        <text class="contact-value">{{contactInfo.address}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+
+
+
+
+
+

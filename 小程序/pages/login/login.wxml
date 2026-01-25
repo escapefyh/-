@@ -2,8 +2,11 @@
 <view class="login-page">
   <view class="container">
         <t-input label="账号" placeholder="请输入您的账号" value="{{account}}" bind:change="getaccount" />
-        <t-input label="密码" placeholder="请输入您的密码" value="{{password}}" bind:change="getpassword"/>
-       <view class="to-register-link" bind:tap="toregister">去注册</view>
+        <t-input label="密码" placeholder="请输入您的密码" value="{{password}}" bind:change="getpassword" confirmType="done" bind:enter="onPasswordConfirm"/>
+       <view class="link-section">
+         <view class="forgot-password-link" bind:tap="toForgotPassword">忘记密码</view>
+         <view class="to-register-link" bind:tap="toregister">去注册</view>
+       </view>
        <t-button theme="primary" size="large" bind:tap="submit">登录</t-button>
        
       </view>

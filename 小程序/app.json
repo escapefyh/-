@@ -19,7 +19,12 @@
     "pages/message/message",
     "pages/chat/chat",
     "pages/addresslist/addresslist",
-    "pages/addressedit/addressedit"
+    "pages/addressedit/addressedit",
+    "pages/settings/settings",
+    "pages/changepassword/changepassword",
+    "pages/about/about",
+    "pages/privacy/privacy",
+    "pages/forgotpassword/forgotpassword"
   ],
   "subpackages": [],
   "themeLocation": "theme.json",

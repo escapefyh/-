@@ -1,0 +1,46 @@
+<!--pages/about/about.wxml-->
+<view class="about-page">
+  <view class="container">
+    <!-- 应用信息 -->
+    <view class="app-info">
+      <view class="app-logo">📱</view>
+      <view class="app-name">{{appName || '拼单商城'}}</view>
+      <view class="app-version">版本 {{appVersion || '1.0.0'}}</view>
+    </view>
+
+    <!-- 关于内容 -->
+    <view class="content-section">
+      <view class="content-title">关于我们</view>
+      <view class="content-text">{{aboutContent || '加载中...'}}</view>
+    </view>
+
+    <!-- 联系方式 -->
+    <view class="contact-section" wx:if="{{contactInfo}}">
+      <view class="content-title">联系我们</view>
+      <view class="contact-item" wx:if="{{contactInfo.email}}">
+        <text class="contact-label">邮箱：</text>
+        <text class="contact-value">{{contactInfo.email}}</text>
+      </view>
+      <view class="contact-item" wx:if="{{contactInfo.phone}}">
+        <text class="contact-label">电话：</text>
+        <text class="contact-value">{{contactInfo.phone}}</text>
+      </view>
+      <view class="contact-item" wx:if="{{contactInfo.address}}">
+        <text class="contact-label">地址：</text>
+        <text class="contact-value">{{contactInfo.address}}</text>
+      </view>
+    </view>
+
+    <!-- 版权信息 -->
+    <view class="copyright-section">
+      <view class="copyright-text">© {{copyrightYear || '2024'}} {{appName || '拼单商城'}} 版权所有</view>
+    </view>
+  </view>
+</view>
+
+
+
+
+
+
+

@@ -45,7 +45,17 @@ async register(){
   
   if (!phone || !phone.trim()) {
     wx.showToast({
-      title: '请输入电话',
+      title: '请输入手机号',
+      icon: 'none'
+    });
+    return;
+  }
+
+  // 验证手机号格式（必须是11位数字）
+  const phoneRegex = /^1[3-9]\d{9}$/;
+  if (!phoneRegex.test(phone.trim())) {
+    wx.showToast({
+      title: '手机号必须是11位数字',
       icon: 'none'
     });
     return;
@@ -58,10 +68,28 @@ async register(){
     });
     return;
   }
+
+  // 验证账号长度（至少6位）
+  if (account.trim().length < 6) {
+    wx.showToast({
+      title: '账号长度不能少于6位',
+      icon: 'none'
+    });
+    return;
+  }
   
   if (!password || !password.trim()) {
     wx.showToast({
       title: '请输入密码',
+      icon: 'none'
+    });
+    return;
+  }
+
+  // 验证密码长度（至少6位）
+  if (password.trim().length < 6) {
+    wx.showToast({
+      title: '密码长度不能少于6位',
       icon: 'none'
     });
     return;
@@ -94,16 +122,20 @@ async register(){
         });
       }, 1500);
     } else if (msg === "error") {
+      // 显示后端返回的具体错误信息
+      const errorMsg = result?.error || '服务器出错';
       wx.showToast({
-        title: '服务器出错!',
-        icon:'none'
+        title: errorMsg,
+        icon: 'none',
+        duration: 2000
       });
     } else {
       // 未知的返回状态
       console.warn('未知的返回状态:', msg);
       wx.showToast({
-        title: '注册失败，请重试',
-        icon:'none'
+        title: result?.error || '注册失败，请重试',
+        icon: 'none',
+        duration: 2000
       });
     }
   } catch (error) {

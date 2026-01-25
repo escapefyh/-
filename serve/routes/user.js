@@ -28,6 +28,12 @@ const isValidAvatarUrl = (url) => {
     return false;
 };
 
+// 验证手机号格式
+const validatePhone = (phone) => {
+    const phonePattern = /^1[3-9]\d{9}$/;
+    return phonePattern.test(phone);
+};
+
 // 更新用户昵称
 router.post('/updateNickname', async (req, res) => {
     try {
@@ -189,6 +195,85 @@ router.get('/info', async (req, res) => {
         return res.status(200).json({
             msg: "error",
             error: "用户不存在"
+        });
+    }
+});
+
+// 通过手机号重置密码接口
+// POST /user/resetPasswordByPhone
+router.post('/resetPasswordByPhone', async (req, res) => {
+    try {
+        const { phone, new_password } = req.body;
+
+        // 验证手机号
+        if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
+            return res.status(200).json({
+                msg: "error",
+                error: "手机号不能为空"
+            });
+        }
+
+        const trimmedPhone = phone.trim();
+
+        // 验证手机号格式
+        if (!validatePhone(trimmedPhone)) {
+            return res.status(200).json({
+                msg: "error",
+                error: "手机号格式不正确"
+            });
+        }
+
+        // 验证新密码
+        if (!new_password || typeof new_password !== 'string' || new_password.trim().length === 0) {
+            return res.status(200).json({
+                msg: "error",
+                error: "新密码长度应在6-20个字符之间"
+            });
+        }
+
+        const trimmedNewPassword = new_password.trim();
+        if (trimmedNewPassword.length < 6 || trimmedNewPassword.length > 20) {
+            return res.status(200).json({
+                msg: "error",
+                error: "新密码长度应在6-20个字符之间"
+            });
+        }
+
+        // 查询用户（通过手机号）
+        const user = await User.findOne({ phone: trimmedPhone });
+
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "该手机号未注册"
+            });
+        }
+
+        // 验证新密码不能与原密码相同
+        if (user.password === trimmedNewPassword) {
+            return res.status(200).json({
+                msg: "error",
+                error: "新密码不能与原密码相同"
+            });
+        }
+
+        // 更新密码
+        await User.updateOne(
+            { phone: trimmedPhone },
+            { $set: { password: trimmedNewPassword } }
+        );
+
+        res.json({
+            msg: "success",
+            data: {
+                message: "密码重置成功"
+            }
+        });
+    } catch (error) {
+        console.log('重置密码失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "重置密码失败"
         });
     }
 });

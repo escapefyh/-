@@ -1,0 +1,42 @@
+<!--pages/settings/settings.wxml-->
+<view class="settings-page">
+  <!-- 功能菜单区域 -->
+  <view class="menu-section">
+    <view class="menu-item" bind:tap="goToAccountSecurity">
+      <view class="menu-icon">🔒</view>
+      <view class="menu-text">账号与安全</view>
+      <view class="menu-arrow">></view>
+    </view>
+    <view class="menu-item" bind:tap="goToAddressManage">
+      <view class="menu-icon">📍</view>
+      <view class="menu-text">收货地址管理</view>
+      <view class="menu-arrow">></view>
+    </view>
+    <view class="menu-item" bind:tap="clearCache">
+      <view class="menu-icon">🗑️</view>
+      <view class="menu-text">清除缓存</view>
+      <view class="menu-arrow">></view>
+    </view>
+  </view>
+
+  <!-- 其他功能区域 -->
+  <view class="menu-section" style="margin-top: 20rpx;">
+    <view class="menu-item" bind:tap="goToAbout">
+      <view class="menu-icon">ℹ️</view>
+      <view class="menu-text">关于我们</view>
+      <view class="menu-arrow">></view>
+    </view>
+    <view class="menu-item" bind:tap="goToPrivacy">
+      <view class="menu-icon">📄</view>
+      <view class="menu-text">隐私政策</view>
+      <view class="menu-arrow">></view>
+    </view>
+  </view>
+
+  <!-- 退出登录按钮（固定在底部） -->
+  <view class="bottom-section">
+    <t-button theme="danger" class="quitbutton" bind:tap="toquit">退出登录</t-button>
+  </view>
+</view>
+
+

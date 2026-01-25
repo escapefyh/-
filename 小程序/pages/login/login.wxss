@@ -16,9 +16,20 @@
 .box .t-radio{
   margin-right: 60rpx;
 }
-.to-register-link{
-  text-align: right;
-  color: blue;
+.link-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forgot-password-link {
+  color: #1296db;
+  font-size: 28rpx;
+}
+
+.to-register-link {
+  color: #1296db;
+  font-size: 28rpx;
 }
 .t-button{
   width: 50%;

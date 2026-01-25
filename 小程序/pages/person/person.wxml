@@ -27,15 +27,10 @@
         <view class="menu-text">商品管理</view>
         <view class="menu-arrow">></view>
       </view>
-      <view class="menu-item" bind:tap="goToAddressManage">
-        <view class="menu-icon">📍</view>
-        <view class="menu-text">地址管理</view>
+      <view class="menu-item" bind:tap="goToSettings">
+        <view class="menu-icon">⚙️</view>
+        <view class="menu-text">设置</view>
         <view class="menu-arrow">></view>
       </view>
-    </view>
-
-    <!-- 退出登录按钮（固定在底部） -->
-    <view class="bottom-section">
-      <t-button theme="danger" class="quitbutton" bind:tap="toquit">退出登录</t-button>
     </view>
 </view>

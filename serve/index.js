@@ -19,7 +19,9 @@ app.use((req, res, next) => {
 });
 
 // 引入路由
-const authRoutes = require('./routes/auth');
+const registerRoutes = require('./routes/register');
+const loginRoutes = require('./routes/login');
+const changePasswordRoutes = require('./routes/changePassword');
 const ossRoutes = require('./routes/oss');
 const goodsRoutes = require('./routes/goods');
 const goodsPublishRoutes = require('./routes/goodsPublish');
@@ -33,22 +35,26 @@ const favoriteRoutes = require('./routes/favorite');
 const chatRoutes = require('./routes/chat');
 const addressRoutes = require('./routes/address');
 const recognizeRoutes = require('./routes/recognize');
+const appRoutes = require('./routes/app');
 
 // 注册路由
-app.use('/', authRoutes);              // /register, /login
+app.use('/', registerRoutes);         // /register
+app.use('/', loginRoutes);            // /login
+app.use('/', changePasswordRoutes);   // /changePassword
 app.use('/oss', ossRoutes);            // /oss/getUploadToken, /oss/upload
 app.use('/goods', goodsRoutes);        // /goods/detail, /goods/list, /goods/myGoods, /goods/getCommentCount, /goods/getFavoriteCount
 app.use('/goods', goodsPublishRoutes); // /goods/publish
 app.use('/goods', goodsSearchRoutes);  // /goods/search
 app.use('/goods', goodsUpdateRoutes);  // /goods/update
 app.use('/goods', goodsDeleteRoutes);  // /goods/delete
-app.use('/user', userRoutes);          // /user/updateNickname
+app.use('/user', userRoutes);          // /user/updateNickname, /user/updateAvatar, /user/info
 app.use('/order', orderRoutes);        // /order/create
 app.use('/groupBuy', groupBuyRoutes);  // /groupBuy/getCurrentCount, /groupBuy/create
 app.use('/favorite', favoriteRoutes);  // /favorite/toggle
 app.use('/chat', chatRoutes);          // /chat/create
 app.use('/address', addressRoutes);   // /address/list, /address/detail, /address/add, /address/update, /address/delete, /address/setDefault
 app.use('/', recognizeRoutes);        // /recognize
+app.use('/app', appRoutes);           // /app/about, /app/privacy
 
 // 启动服务
 app.listen(3000,() => {
