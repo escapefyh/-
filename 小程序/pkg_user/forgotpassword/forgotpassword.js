@@ -133,7 +133,7 @@ Page({
       wx.hideLoading();
       console.error('修改密码失败:', error);
       wx.showToast({
-        title: error?.msg || '网络请求失败，请重试',
+        title: error?.error || '网络请求失败，请重试',
         icon: 'none',
         duration: 2000
       });

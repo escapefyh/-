@@ -215,7 +215,7 @@ Page({
         });
         setTimeout(() => {
           wx.navigateTo({
-            url: '/pages/login/login'
+            url: '/pkg_user/login/login'
           });
         }, 1500);
         this.setData({ uploading: false });

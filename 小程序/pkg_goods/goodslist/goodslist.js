@@ -199,7 +199,7 @@ Page({
   onGoodsClick(e) {
     const goods_id = e.currentTarget.dataset.goodsId;
     wx.navigateTo({
-      url: `/pages/goodsdetail/goodsdetail?goods_id=${goods_id}`
+      url: `/pkg_goods/goodsdetail/goodsdetail?goods_id=${goods_id}`
     });
   },
 

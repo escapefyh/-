@@ -123,7 +123,7 @@ Page({
 
     // 跳转到商品详情页面
     wx.navigateTo({
-      url: `/pages/goodsdetail/goodsdetail?goods_id=${goodsId}`
+      url: `/pkg_goods/goodsdetail/goodsdetail?goods_id=${goodsId}`
     });
   },
 

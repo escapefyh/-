@@ -459,7 +459,7 @@ Page({
   onGoodsClick(e) {
     const goods_id = e.currentTarget.dataset.goodsId;
     wx.navigateTo({
-      url: `/pages/goodsdetail/goodsdetail?goods_id=${goods_id}`
+      url: `/pkg_goods/goodsdetail/goodsdetail?goods_id=${goods_id}`
     });
   },
 
@@ -487,7 +487,7 @@ Page({
     
     // 跳转到商品列表页面，传递分类ID和名称
     wx.navigateTo({
-      url: `/pages/goodslist/goodslist?category_id=${categoryId}&category_name=${encodeURIComponent(categoryName)}`
+      url: `/pkg_goods/goodslist/goodslist?category_id=${categoryId}&category_name=${encodeURIComponent(categoryName)}`
     });
   },
 

@@ -1,32 +1,47 @@
 {
-  "darkmode": false,  
+  "darkmode": false,
   "__备注1__": "这是深色模式开关",
   "pages": [
-    "pages/login/login",
-    "pages/register/register",
     "pages/index/index",
-    "pages/person/person",
-    "pages/repairlist/repairlist",
-    "pages/userinfo/userinfo",
-    "pages/sellindex/sellindex",
-    "pages/sellgoods/sellgoods",
-    "pages/goodsdetail/goodsdetail",
-    "pages/goodslist/goodslist",
-    "pages/firelist/firelist",
-    "pages/order/order",
-    "pages/collect/collect",
-    "pages/goodsmanage/goodsmanage",
     "pages/message/message",
-    "pages/chat/chat",
-    "pages/addresslist/addresslist",
-    "pages/addressedit/addressedit",
-    "pages/settings/settings",
-    "pages/changepassword/changepassword",
-    "pages/about/about",
-    "pages/privacy/privacy",
-    "pages/forgotpassword/forgotpassword"
+    "pages/sellindex/sellindex",
+    "pages/firelist/firelist",
+    "pages/person/person"
   ],
-  "subpackages": [],
+  "subPackages": [
+    {
+      "root": "pkg_user",
+      "pages": [
+        "login/login",
+        "register/register",
+        "forgotpassword/forgotpassword",
+        "userinfo/userinfo",
+        "addresslist/addresslist",
+        "addressedit/addressedit",
+        "settings/settings",
+        "changepassword/changepassword",
+        "collect/collect"
+      ]
+    },
+    {
+      "root": "pkg_goods",
+      "pages": [
+        "sellgoods/sellgoods",
+        "goodsdetail/goodsdetail",
+        "goodslist/goodslist",
+        "goodsmanage/goodsmanage",
+        "order/order"
+      ]
+    },
+    {
+      "root": "pkg_interact",
+      "pages": [
+        "chat/chat",
+        "about/about",
+        "privacy/privacy"
+      ]
+    }
+  ],
   "themeLocation": "theme.json",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",

@@ -13,7 +13,7 @@ Page({
    */
   onPublish() {
     wx.navigateTo({
-      url: '/pages/sellgoods/sellgoods'
+      url: '/pkg_goods/sellgoods/sellgoods'
     });
   },
 

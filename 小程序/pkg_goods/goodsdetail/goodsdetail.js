@@ -260,7 +260,7 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pages/login/login'
+          url: '/pkg_user/login/login'
         });
       }, 1500);
       return;
@@ -285,7 +285,7 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pages/login/login'
+          url: '/pkg_user/login/login'
         });
       }, 1500);
       return;
@@ -370,7 +370,7 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pages/login/login'
+          url: '/pkg_user/login/login'
         });
       }, 1500);
       return;
@@ -427,7 +427,7 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pages/login/login'
+          url: '/pkg_user/login/login'
         });
       }, 1500);
       return;
@@ -454,7 +454,7 @@ Page({
     // 跳转到聊天页面
     const goodsId = this.data.goods_id;
     wx.navigateTo({
-      url: `/pages/chat/chat?target_user_id=${sellerId}&goods_id=${goodsId || ''}`
+      url: `/pkg_interact/chat/chat?target_user_id=${sellerId}&goods_id=${goodsId || ''}`
     });
   },
 

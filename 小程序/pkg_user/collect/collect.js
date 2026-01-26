@@ -39,7 +39,7 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pages/login/login'
+          url: '/pkg_user/login/login'
         });
       }, 1500);
       return;
@@ -127,7 +127,7 @@ Page({
     if (!goodsId) return;
 
     wx.navigateTo({
-      url: `/pages/goodsdetail/goodsdetail?goods_id=${goodsId}`
+      url: `/pkg_goods/goodsdetail/goodsdetail?goods_id=${goodsId}`
     });
   },
 

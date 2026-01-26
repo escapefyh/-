@@ -79,7 +79,7 @@ Page({
   onEditAddress(e) {
     const addressId = e.currentTarget.dataset.addressId;
     wx.navigateTo({
-      url: `/pages/addressedit/addressedit?address_id=${addressId}`
+      url: `/pkg_user/addressedit/addressedit?address_id=${addressId}`
     });
   },
 
@@ -88,7 +88,7 @@ Page({
    */
   onAddAddress() {
     wx.navigateTo({
-      url: '/pages/addressedit/addressedit'
+      url: '/pkg_user/addressedit/addressedit'
     });
   },
 

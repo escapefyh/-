@@ -7,23 +7,25 @@ Page({
    * 页面的初始数据
    */
   data: {
-      wxlogin:false,
-      userinfo:undefined
+    wxlogin: false,
+    userinfo: undefined
   },
 
-  getuserinfo(){
+  getuserinfo() {
     // 跳转到用户信息页面进行授权
+    // ✅ 修改：路径改为 pkg_user 分包
     wx.navigateTo({
-      url: '../userinfo/userinfo'
+      url: '/pkg_user/userinfo/userinfo'
     });
   },
 
   /**
-   * 跳转到购物车页面
+   * 跳转到购物车(我的收藏)页面
    */
   goToCollect() {
+    // ✅ 修改：路径改为 pkg_user 分包
     wx.navigateTo({
-      url: '../collect/collect'
+      url: '/pkg_user/collect/collect'
     });
   },
 
@@ -31,8 +33,9 @@ Page({
    * 跳转到我的订单页面
    */
   goToOrder() {
+    // ✅ 修改：路径改为 pkg_goods 分包
     wx.navigateTo({
-      url: '../order/order'
+      url: '/pkg_goods/order/order'
     });
   },
 
@@ -40,8 +43,9 @@ Page({
    * 跳转到商品管理页面
    */
   goToGoodsManage() {
+    // ✅ 修改：路径改为 pkg_goods 分包
     wx.navigateTo({
-      url: '../goodsmanage/goodsmanage'
+      url: '/pkg_goods/goodsmanage/goodsmanage'
     });
   },
 
@@ -49,24 +53,17 @@ Page({
    * 跳转到设置页面
    */
   goToSettings() {
+    // ✅ 修改：路径改为 pkg_user 分包
     wx.navigateTo({
-      url: '../settings/settings'
+      url: '/pkg_user/settings/settings'
     });
   },
 
   /**
    * 生命周期函数--监听页面加载
    */
-  /*
-  onLoad(options) 是小程序页面首次加载时执行的生命周期函数，仅触发一次；
-options 参数用于接收其他页面跳转时传递的 URL 参数，是页面间传参的核心方式；
-主要用于页面初始化（如请求数据、检查登录、接收参数），是页面逻辑的 “入口”。
-*/
-
-/*this.setData({ wxlogin, userinfo }) 的作用是 将变量 wxlogin 和 userinfo 的值更新到页面数据中，并触发视图重新渲染，确保页面显示最新的登录状态和用户信息。
-*/
   onLoad(options) {
-    
+
   },
 
   /**
@@ -79,23 +76,16 @@ options 参数用于接收其他页面跳转时传递的 URL 参数，是页面�
   /**
    * 生命周期函数--监听页面显示
    */
-
-  /*
-  你打开 “我的” 页面 → onLoad（1 次） + onShow（第 1 次）；
-从 “我的” 页面跳转到 “设置” 页面 → 当前页面触发 onHide；
-从 “设置” 页面返回 “我的” 页面 → 不会触发 onLoad，但会触发 onShow（第 2 次）；
-把小程序切到后台（比如切到微信聊天）再切回来 → 触发 onShow（第 3 次）。
-*/
   onShow() {
     // 检查是否已登录
     const userInfo = wx.getStorageSync("userInfo");
     const user_id = wx.getStorageSync("user_id");
-    
+
     // 如果已登录，检查是否有nickname
     if (userInfo && user_id) {
       // 获取该账号的微信授权信息（按user_id存储）
       const userinfo = getUserinfo(user_id);
-      
+
       // 如果有nickname或userinfo，说明已授权
       if (userInfo.nickname || (userinfo && userinfo.nickname)) {
         this.setData({

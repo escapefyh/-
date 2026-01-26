@@ -13,7 +13,7 @@ Page({
    */
   goToAccountSecurity() {
     wx.navigateTo({
-      url: '../changepassword/changepassword'
+      url: '/pkg_user/changepassword/changepassword'
     });
   },
 
@@ -22,7 +22,7 @@ Page({
    */
   goToAddressManage() {
     wx.navigateTo({
-      url: '../addresslist/addresslist'
+      url: '/pkg_user/addresslist/addresslist'
     });
   },
 
@@ -48,7 +48,7 @@ Page({
             // 清除缓存后跳转到登录页面
             setTimeout(() => {
               wx.reLaunch({
-                url: '/pages/login/login'
+                url: '/pkg_user/login/login'
               });
             }, 1500);
           } catch (error) {
@@ -68,7 +68,7 @@ Page({
    */
   goToAbout() {
     wx.navigateTo({
-      url: '../about/about'
+      url: '/pkg_interact/about/about'
     });
   },
 
@@ -77,7 +77,7 @@ Page({
    */
   goToPrivacy() {
     wx.navigateTo({
-      url: '../privacy/privacy'
+      url: '/pkg_interact/privacy/privacy'
     });
   },
 
@@ -110,7 +110,7 @@ Page({
           // 跳转到登录页面（清空页面栈，不能返回）
           setTimeout(() => {
             wx.reLaunch({
-              url: '/pages/login/login'
+              url: '/pkg_user/login/login'
             });
           }, 1500);
         }
