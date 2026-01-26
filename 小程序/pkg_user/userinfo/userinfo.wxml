@@ -20,3 +20,6 @@ chooseavatar 是小程序为选择头像配套的内置事件名，必须按此�
       <t-button theme="primary" class="ack" bind:tap="submit">确认</t-button>
 </view>
 
+
+
+

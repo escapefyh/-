@@ -258,7 +258,7 @@ Page({
         category_id: this.data.selectedCategoryId, // 分类ID（必填）
         groupBuyEnabled: this.data.groupBuyEnabled || false,
         groupBuyCount: this.data.groupBuyEnabled ? parseInt(this.data.groupBuyCount) : null, // 拼单人数
-        groupBuyDiscount: this.data.groupBuyEnabled ? parseFloat(this.data.groupBuyDiscount.toFixed(2)) : null, // 拼团折扣
+        groupBuyDiscount: this.data.groupBuyEnabled ? parseFloat(parseFloat(this.data.groupBuyDiscount).toFixed(2)) : null, // 拼团折扣
         specEnabled: this.data.specEnabled || false, // 是否开启规格
         specs: this.data.specEnabled ? this.formatSpecsForApi() : null // 规格选项数据
       };
@@ -504,6 +504,7 @@ Page({
    * 折扣输入
    */
   onDiscountInput(e) {
+    // 1. 直接获取用户输入的内容（哪怕是空字符串，或者是 "0." 这种半成品）
     const value = e.detail.value;
     this.setData({
       groupBuyDiscount: value

@@ -1,22 +1,131 @@
 <!--pages/order/order.wxml-->
 <view class="order-page">
-  <view class="empty-container">
-    <text>我的订单功能开发中...</text>
+  <!-- 状态筛选栏 -->
+  <view class="status-tabs">
+    <view 
+      wx:for="{{statusTabs}}" 
+      wx:key="key"
+      class="status-tab {{activeStatus === item.key ? 'status-tab-active' : ''}}"
+      data-status="{{item.key}}"
+      bind:tap="onStatusTabChange"
+    >
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 加载中状态 -->
+  <view wx:if="{{loading && orderList.length === 0}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{isEmpty}}" class="empty-container">
+    <text class="empty-text">暂无订单</text>
+    <text class="empty-tip">快去购买你喜欢的商品吧~</text>
+  </view>
+
+  <!-- 订单列表 -->
+  <view wx:else class="order-list">
+    <view 
+      class="order-item" 
+      wx:for="{{orderList}}" 
+      wx:key="order_id"
+      bind:tap="onViewDetail"
+      data-order-id="{{item.order_id}}"
+    >
+      <!-- 订单头部：订单编号和状态 -->
+      <view class="order-header">
+        <text class="order-no">订单号：{{item.order_no || item.order_id}}</text>
+        <text class="order-status order-status-{{item.status}}">{{item.status_text}}</text>
+      </view>
+
+      <!-- 订单内容：商品信息 -->
+      <view class="order-content">
+        <!-- 商品图片 -->
+        <view class="order-goods-image">
+          <image 
+            wx:if="{{item.goods_image && item.goods_image.length > 0}}"
+            class="goods-image" 
+            src="{{item.goods_image[0]}}" 
+            mode="aspectFill"
+            lazy-load="{{true}}"
+          />
+          <image 
+            wx:else
+            class="goods-image" 
+            src="/assets/default_goods.png" 
+            mode="aspectFill"
+          />
+        </view>
+
+        <!-- 商品信息 -->
+        <view class="order-goods-info">
+          <view class="goods-description">{{item.goods_description || '商品描述'}}</view>
+          <view class="goods-spec" wx:if="{{item.spec_name}}">
+            <text>规格：{{item.spec_name}}</text>
+          </view>
+          <view class="goods-quantity">
+            <text>数量：{{item.quantity || 1}}</text>
+          </view>
+          <view class="goods-price">
+            <text>¥{{item.total_price_formatted || '0.00'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 订单底部：时间和操作按钮 -->
+      <view class="order-footer">
+        <text class="order-time">{{item.create_time_formatted || ''}}</text>
+        <view class="order-actions">
+          <!-- 待付款：取消订单、去付款 -->
+          <view 
+            wx:if="{{item.status === 'pending'}}"
+            class="action-btn action-btn-secondary"
+            catch:tap="onCancelOrder"
+            data-order-id="{{item.order_id}}"
+          >
+            <text>取消订单</text>
+          </view>
+          <view 
+            wx:if="{{item.status === 'pending'}}"
+            class="action-btn action-btn-primary"
+            catch:tap="onPayOrder"
+            data-order-id="{{item.order_id}}"
+          >
+            <text>去付款</text>
+          </view>
+
+          <!-- 待发货：取消订单 -->
+          <view 
+            wx:if="{{item.status === 'paid'}}"
+            class="action-btn action-btn-secondary"
+            catch:tap="onCancelOrder"
+            data-order-id="{{item.order_id}}"
+          >
+            <text>取消订单</text>
+          </view>
+
+          <!-- 待收货：确认收货 -->
+          <view 
+            wx:if="{{item.status === 'shipped'}}"
+            class="action-btn action-btn-primary"
+            catch:tap="onConfirmReceive"
+            data-order-id="{{item.order_id}}"
+          >
+            <text>确认收货</text>
+          </view>
+
+          <!-- 已完成、已取消：无操作按钮 -->
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多提示 -->
+  <view wx:if="{{loading && orderList.length > 0}}" class="loading-more">
+    <text>加载中...</text>
+  </view>
+  <view wx:if="{{!hasMore && orderList.length > 0}}" class="no-more">
+    <text>没有更多了</text>
   </view>
 </view>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

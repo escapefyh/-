@@ -123,6 +123,26 @@ router.get('/detail', async (req, res) => {
         // 处理头像URL，确保始终返回完整的URL
         const processedAvatar = processAvatarUrl(seller.avatar);
 
+        // 查询规格数据（如果商品开启了规格）
+        let specsData = null;
+        if (goods.spec_enabled) {
+            const specOptions = await SpecOption.find({ goods_id: goods_id })
+                .sort({ sort_order: 1 })
+                .lean();
+            
+            if (specOptions && specOptions.length > 0) {
+                specsData = specOptions.map(spec => ({
+                    spec_id: spec.spec_option_id, // 使用 spec_option_id 作为 spec_id
+                    name: spec.name,
+                    price: spec.price,
+                    stock: spec.stock
+                }));
+            } else {
+                // 如果开启了规格但没有规格数据，返回空数组
+                specsData = [];
+            }
+        }
+
         // 返回商品详情和卖家信息
         res.json({
             msg: "success",
@@ -135,6 +155,8 @@ router.get('/detail', async (req, res) => {
                     price: goods.price,
                     category_id: goods.category_id,
                     sales_count: goods.sales_count || 0,
+                    spec_enabled: goods.spec_enabled || false,
+                    specs: specsData, // 规格数据：开启规格时返回数组，未开启时返回 null
                     group_buy_enabled: goods.group_buy_enabled || false,
                     group_buy_count: goods.group_buy_count || null,
                     group_buy_discount: goods.group_buy_discount || null,

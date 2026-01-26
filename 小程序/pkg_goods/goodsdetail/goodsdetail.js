@@ -17,7 +17,16 @@ Page({
     currentGroupCount: 0,    // 当前正在拼团的人数
     commentCount: 0,         // 评论数目
     favoriteCount: 0,        // 收藏数目
-    isFavorited: false       // 当前用户是否已收藏
+    isFavorited: false,      // 当前用户是否已收藏
+    // 购买弹窗相关
+    showBuyModal: false,      // 是否显示购买弹窗
+    buyType: 'normal',       // 购买类型：'normal' 直接买，'group' 拼团买
+    userInfo: {},            // 用户信息
+    addressList: [],         // 地址列表
+    selectedAddress: null,   // 选中的地址
+    selectedSpec: null,      // 选中的规格
+    quantity: 1,             // 购买数量
+    totalPrice: 0            // 总价
   },
 
   /**
@@ -160,6 +169,31 @@ Page({
         // 确保 sales_count 存在
         goods.sales_count = goods.sales_count || 0;
         
+        // 处理规格数据
+        // 确保 spec_enabled 是布尔值
+        goods.spec_enabled = goods.spec_enabled === true || goods.spec_enabled === 1 || goods.spec_enabled === '1';
+        
+        // 确保 specs 是数组，并且每个规格都有必要的字段
+        if (goods.spec_enabled) {
+          if (!goods.specs || !Array.isArray(goods.specs)) {
+            goods.specs = [];
+            goods.spec_enabled = false; // 如果没有规格数据，关闭规格功能
+          } else {
+            // 为每个规格添加索引，并确保字段完整
+            goods.specs = goods.specs.map((spec, index) => ({
+              spec_id: spec.spec_id || spec.id || `spec_${index}`, // 如果没有spec_id，使用索引生成
+              name: spec.name || `规格${index + 1}`,
+              price: parseFloat(spec.price) || 0,
+              stock: parseInt(spec.stock) || 0,
+              _index: index // 添加索引用于选择
+            }));
+          }
+        } else {
+          goods.specs = [];
+        }
+        
+        console.log('处理后的规格数据:', goods.spec_enabled, goods.specs);
+        
         this.setData({
           goods,
           seller,
@@ -251,7 +285,7 @@ Page({
   /**
    * 单独购买
    */
-  onBuyClick() {
+  async onBuyClick() {
     const user_id = wx.getStorageSync('user_id');
     if (!user_id) {
       wx.showToast({
@@ -260,23 +294,20 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pkg_user/login/login'
+          url: '/pages/login/login'
         });
       }, 1500);
       return;
     }
 
-    // TODO: 跳转到订单确认页面或直接创建订单
-    wx.showToast({
-      title: '购买功能开发中',
-      icon: 'none'
-    });
+    // 打开购买弹窗
+    await this.openBuyModal('normal');
   },
 
   /**
    * 拼团购买（免拼购买）
    */
-  onGroupBuyClick() {
+  async onGroupBuyClick() {
     const user_id = wx.getStorageSync('user_id');
     if (!user_id) {
       wx.showToast({
@@ -285,17 +316,23 @@ Page({
       });
       setTimeout(() => {
         wx.navigateTo({
-          url: '/pkg_user/login/login'
+          url: '/pages/login/login'
         });
       }, 1500);
       return;
     }
 
-    // TODO: 跳转到拼团购买页面或创建拼团订单
-    wx.showToast({
-      title: '拼团购买功能开发中',
-      icon: 'none'
-    });
+    // 检查商品是否开启拼团
+    if (!this.data.goods.group_buy_enabled) {
+      wx.showToast({
+        title: '该商品未开启拼团',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 打开购买弹窗
+    await this.openBuyModal('group');
   },
 
 
@@ -454,7 +491,7 @@ Page({
     // 跳转到聊天页面
     const goodsId = this.data.goods_id;
     wx.navigateTo({
-      url: `/pkg_interact/chat/chat?target_user_id=${sellerId}&goods_id=${goodsId || ''}`
+      url: `/pkg_trade/chat/chat?target_user_id=${sellerId}&goods_id=${goodsId || ''}`
     });
   },
 
@@ -507,6 +544,268 @@ Page({
    */
   onShareAppMessage() {
 
+  },
+
+  /**
+   * 打开购买弹窗
+   */
+  async openBuyModal(buyType) {
+    const user_id = wx.getStorageSync('user_id');
+    
+    // 加载用户信息和地址
+    try {
+      wx.showLoading({ title: '加载中...', mask: true });
+      
+      // 获取用户信息
+      const userinfo = getUserinfo(user_id);
+      const userInfo = wx.getStorageSync('userInfo') || {};
+      
+      // 获取地址列表
+      const addressResult = await ajax(`/address/list?user_id=${user_id}`, 'GET', {});
+      let addressList = [];
+      let selectedAddress = null;
+      
+      if (addressResult?.msg === 'success') {
+        addressList = addressResult.data?.list || [];
+        // 默认选择第一个地址，或者标记为默认的地址
+        selectedAddress = addressList.find(addr => addr.is_default) || addressList[0] || null;
+      }
+      
+      // 初始化规格选择
+      let selectedSpec = null;
+      if (this.data.goods.spec_enabled && this.data.goods.specs && this.data.goods.specs.length > 0) {
+        // 如果有规格，默认选择第一个
+        selectedSpec = { ...this.data.goods.specs[0] };
+      }
+      
+      // 计算总价
+      const basePrice = selectedSpec ? parseFloat(selectedSpec.price) : parseFloat(this.data.goods.price);
+      const finalPrice = buyType === 'group' && this.data.goods.group_buy_discount 
+        ? basePrice * this.data.goods.group_buy_discount 
+        : basePrice;
+      const totalPrice = (finalPrice * 1).toFixed(2);
+      
+      wx.hideLoading();
+      
+      this.setData({
+        showBuyModal: true,
+        buyType: buyType,
+        userInfo: {
+          nickname: userinfo?.nickname || userInfo?.nickname || '未设置昵称',
+          avatar: userinfo?.avatar || '/assets/default_avatar.png'
+        },
+        addressList: addressList,
+        selectedAddress: selectedAddress,
+        selectedSpec: selectedSpec,
+        quantity: 1,
+        totalPrice: totalPrice
+      });
+    } catch (error) {
+      wx.hideLoading();
+      console.error('加载购买信息失败:', error);
+      wx.showToast({
+        title: '加载失败，请重试',
+        icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 关闭购买弹窗
+   */
+  onCloseBuyModal() {
+    this.setData({
+      showBuyModal: false
+    });
+  },
+
+  /**
+   * 阻止弹窗内容区域的事件冒泡
+   */
+  stopPropagation() {
+    // 空函数，用于阻止事件冒泡
+  },
+
+  /**
+   * 选择地址
+   */
+  onSelectAddress() {
+    if (this.data.addressList.length === 0) {
+      wx.showToast({
+        title: '请先添加收货地址',
+        icon: 'none'
+      });
+      setTimeout(() => {
+        wx.navigateTo({
+          url: '/pkg_user/addresslist/addresslist'
+        });
+      }, 1500);
+      return;
+    }
+    
+    // 显示地址选择器（这里简化处理，直接选择第一个或默认地址）
+    // 实际项目中可以使用 picker 组件
+    const addresses = this.data.addressList;
+    const addressNames = addresses.map((addr, index) => {
+      return `${addr.name} ${addr.phone} ${addr.province}${addr.city}${addr.district}${addr.detail}`;
+    });
+    
+    wx.showActionSheet({
+      itemList: addressNames,
+      success: (res) => {
+        this.setData({
+          selectedAddress: addresses[res.tapIndex]
+        });
+      }
+    });
+  },
+
+  /**
+   * 选择规格
+   */
+  onSelectSpec(e) {
+    const specIndex = parseInt(e.currentTarget.dataset.index);
+    const specs = this.data.goods.specs || [];
+    
+    if (!isNaN(specIndex) && specIndex >= 0 && specIndex < specs.length) {
+      const selectedSpec = specs[specIndex];
+      this.setData({
+        selectedSpec: selectedSpec
+      });
+      
+      // 重新计算总价
+      this.calculateTotalPrice();
+    } else {
+      console.error('选择规格失败: 索引无效', specIndex, specs.length);
+    }
+  },
+
+  /**
+   * 增加数量
+   */
+  onIncreaseQuantity() {
+    const stock = this.data.selectedSpec 
+      ? (this.data.selectedSpec.stock || 0)
+      : (this.data.goods.stock || 999);
+    
+    if (this.data.quantity < stock) {
+      this.setData({
+        quantity: this.data.quantity + 1
+      });
+      this.calculateTotalPrice();
+    } else {
+      wx.showToast({
+        title: '库存不足',
+        icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 减少数量
+   */
+  onDecreaseQuantity() {
+    if (this.data.quantity > 1) {
+      this.setData({
+        quantity: this.data.quantity - 1
+      });
+      this.calculateTotalPrice();
+    }
+  },
+
+  /**
+   * 计算总价
+   */
+  calculateTotalPrice() {
+    const basePrice = this.data.selectedSpec 
+      ? parseFloat(this.data.selectedSpec.price) 
+      : parseFloat(this.data.goods.price);
+    
+    const finalPrice = this.data.buyType === 'group' && this.data.goods.group_buy_discount
+      ? basePrice * this.data.goods.group_buy_discount
+      : basePrice;
+    
+    const totalPrice = (finalPrice * this.data.quantity).toFixed(2);
+    
+    this.setData({
+      totalPrice: totalPrice
+    });
+  },
+
+  /**
+   * 确认购买
+   */
+  async onConfirmBuy() {
+    // 验证必填项
+    if (!this.data.selectedAddress) {
+      wx.showToast({
+        title: '请选择收货地址',
+        icon: 'none'
+      });
+      return;
+    }
+
+    if (this.data.goods.spec_enabled && !this.data.selectedSpec) {
+      wx.showToast({
+        title: '请选择商品规格',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const user_id = wx.getStorageSync('user_id');
+    
+    try {
+      wx.showLoading({ title: '提交中...', mask: true });
+      
+      // 准备订单数据
+      const orderData = {
+        user_id: user_id,
+        goods_id: this.data.goods_id,
+        address_id: this.data.selectedAddress.address_id,
+        quantity: this.data.quantity,
+        spec_id: this.data.selectedSpec ? (this.data.selectedSpec.spec_id || this.data.selectedSpec.id || null) : null,
+        spec_name: this.data.selectedSpec ? this.data.selectedSpec.name : null, // 规格名称，用于后端验证
+        is_group_buy: this.data.buyType === 'group',
+        total_price: this.data.totalPrice
+      };
+      
+      // 调用创建订单接口
+      const result = await ajax('/order/create', 'POST', orderData);
+      
+      wx.hideLoading();
+      
+      if (result?.msg === 'success') {
+        wx.showToast({
+          title: '订单创建成功',
+          icon: 'success'
+        });
+        
+        // 关闭弹窗
+        this.onCloseBuyModal();
+        
+        // 跳转到订单页面
+        setTimeout(() => {
+          wx.navigateTo({
+            url: '/pkg_trade/order/order'
+          });
+        }, 1500);
+      } else {
+        wx.showToast({
+          title: result?.error || '订单创建失败',
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('创建订单失败:', error);
+      wx.showToast({
+        title: '网络异常，请重试',
+        icon: 'none'
+      });
+    }
   }
 })
+
 

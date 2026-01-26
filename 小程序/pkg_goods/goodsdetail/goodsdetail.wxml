@@ -95,5 +95,87 @@
       </view>
     </view>
   </view>
+
+  <!-- 购买弹窗 -->
+  <view wx:if="{{showBuyModal}}" class="buy-modal-mask" bind:tap="onCloseBuyModal">
+    <view class="buy-modal-content" catch:tap="stopPropagation">
+      <!-- 弹窗头部 -->
+      <view class="buy-modal-header">
+        <text class="buy-modal-title">确认订单</text>
+        <view class="buy-modal-close" bind:tap="onCloseBuyModal">×</view>
+      </view>
+
+      <!-- 用户信息和地址 -->
+      <view class="buy-modal-section">
+        <view class="user-info-row">
+          <text class="user-name">{{userInfo.nickname}}</text>
+        </view>
+        <view class="address-row" bind:tap="onSelectAddress">
+          <text class="address-label">收货地址：</text>
+          <text class="address-text" wx:if="{{selectedAddress}}">
+            {{selectedAddress.province}}{{selectedAddress.city}}{{selectedAddress.district}}{{selectedAddress.detail}}
+          </text>
+          <text class="address-text address-placeholder" wx:else>请选择收货地址</text>
+          <text class="address-arrow">></text>
+        </view>
+      </view>
+
+      <!-- 商品信息 -->
+      <view class="buy-modal-section">
+        <view class="goods-info-row">
+          <image class="goods-thumb" src="{{goods.images && goods.images[0] ? goods.images[0] : ''}}" mode="aspectFill" />
+          <view class="goods-info-content">
+            <text class="goods-name">{{goods.description}}</text>
+            <view class="goods-price-row">
+              <text class="goods-price">¥{{buyType === 'group' ? groupBuyPrice : goods.price}}</text>
+              <text class="goods-original-price" wx:if="{{buyType === 'group'}}">¥{{goods.price}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 规格选择 -->
+      <view class="buy-modal-section" wx:if="{{goods.spec_enabled && goods.specs && goods.specs.length > 0}}">
+        <view class="spec-label">选择规格：</view>
+        <view class="spec-list">
+          <view 
+            wx:for="{{goods.specs}}" 
+            wx:key="index"
+            class="spec-item {{selectedSpec && selectedSpec._index === index ? 'spec-item-active' : ''}}"
+            data-index="{{index}}"
+            bind:tap="onSelectSpec"
+          >
+            <text class="spec-name">{{item.name}}</text>
+            <text class="spec-price">¥{{item.price}}</text>
+            <text class="spec-stock" wx:if="{{item.stock !== undefined && item.stock !== null}}">库存：{{item.stock}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 数量选择 -->
+      <view class="buy-modal-section">
+        <view class="quantity-row">
+          <text class="quantity-label">购买数量：</text>
+          <view class="quantity-control">
+            <view class="quantity-btn" bind:tap="onDecreaseQuantity">-</view>
+            <text class="quantity-value">{{quantity}}</text>
+            <view class="quantity-btn" bind:tap="onIncreaseQuantity">+</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 底部购买按钮 -->
+      <view class="buy-modal-footer">
+        <view class="price-summary">
+          <text class="total-label">合计：</text>
+          <text class="total-price">¥{{totalPrice}}</text>
+        </view>
+        <view class="confirm-btn" bind:tap="onConfirmBuy">
+          <text class="confirm-btn-text">{{buyType === 'group' ? '拼团购买' : '立即购买'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>
+
 

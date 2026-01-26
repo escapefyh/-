@@ -483,6 +483,79 @@ AddressSchema.index({ user_id: 1, is_default: 1 }); // 便于查询用户的默�
 
 const Address = mongoose.model("Address", AddressSchema);
 
+// 订单表
+const OrderSchema = new mongoose.Schema({
+    // 订单ID
+    order_id: {
+        type: String,
+        required: true
+    },
+    // 订单编号（唯一标识）
+    order_no: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 用户ID（购买者）
+    user_id: {
+        type: String,
+        required: true
+    },
+    // 商品ID
+    goods_id: {
+        type: String,
+        required: true
+    },
+    // 收货地址ID
+    address_id: {
+        type: String,
+        required: true
+    },
+    // 购买数量
+    quantity: {
+        type: Number,
+        required: true
+    },
+    // 规格ID（如果商品开启了规格）
+    spec_id: {
+        type: String,
+        default: null
+    },
+    // 是否为拼团购买
+    is_group_buy: {
+        type: Boolean,
+        default: false
+    },
+    // 订单总价
+    total_price: {
+        type: Number,
+        required: true
+    },
+    // 订单状态：pending(待支付), paid(已支付), shipped(已发货), completed(已完成), cancelled(已取消)
+    status: {
+        type: String,
+        enum: ['pending', 'paid', 'shipped', 'completed', 'cancelled'],
+        default: 'pending'
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 更新时间
+    update_time: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引
+OrderSchema.index({ user_id: 1 }); // 便于查询用户的订单
+OrderSchema.index({ goods_id: 1 }); // 便于查询商品的订单
+OrderSchema.index({ order_no: 1 }); // 订单编号唯一索引
+
+const Order = mongoose.model("Order", OrderSchema);
+
 module.exports = {
     User,
     Goods,
@@ -493,5 +566,6 @@ module.exports = {
     Chat,
     ChatMessage,
     SpecOption,
-    Address
+    Address,
+    Order
 };

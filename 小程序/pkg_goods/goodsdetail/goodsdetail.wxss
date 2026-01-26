@@ -213,5 +213,282 @@
   margin-top: 4rpx;
 }
 
+/* 购买弹窗样式 */
+.buy-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.buy-modal-content {
+  width: 100%;
+  max-height: 80vh;
+  background-color: #fff;
+  border-radius: 30rpx 30rpx 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.buy-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.buy-modal-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.buy-modal-close {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  color: #999;
+}
+
+.buy-modal-section {
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 用户信息和地址 */
+.user-info-row {
+  margin-bottom: 20rpx;
+}
+
+.user-name {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.address-row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.address-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.address-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.address-placeholder {
+  color: #999;
+}
+
+.address-arrow {
+  font-size: 28rpx;
+  color: #999;
+  margin-left: 10rpx;
+}
+
+/* 商品信息 */
+.goods-info-row {
+  display: flex;
+  gap: 20rpx;
+}
+
+.goods-thumb {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+
+.goods-info-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.goods-name {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.goods-price-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.goods-price {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #ff4444;
+}
+
+.goods-original-price {
+  font-size: 28rpx;
+  color: #999;
+  text-decoration: line-through;
+}
+
+/* 规格选择 */
+.spec-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.spec-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.spec-item {
+  padding: 20rpx 30rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 150rpx;
+}
+
+.spec-item-active {
+  border-color: #ff4444;
+  background-color: #fff5f5;
+}
+
+.spec-name {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.spec-price {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ff4444;
+  margin-bottom: 8rpx;
+}
+
+.spec-stock {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 数量选择 */
+.quantity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quantity-label {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 30rpx;
+}
+
+.quantity-btn {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  font-size: 36rpx;
+  color: #333;
+  background-color: #fff;
+}
+
+.quantity-value {
+  font-size: 32rpx;
+  color: #333;
+  min-width: 60rpx;
+  text-align: center;
+}
+
+/* 底部购买按钮 */
+.buy-modal-footer {
+  display: flex;
+  align-items: center;
+  padding: 30rpx;
+  background-color: #fff;
+  border-top: 1rpx solid #f0f0f0;
+  gap: 20rpx;
+}
+
+.price-summary {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+}
+
+.total-label {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.total-price {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #ff4444;
+}
+
+.confirm-btn {
+  padding: 24rpx 60rpx;
+  background-color: #ff4444;
+  border-radius: 50rpx;
+  flex-shrink: 0;
+}
+
+.confirm-btn-text {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+
 
 
