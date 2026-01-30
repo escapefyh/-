@@ -100,6 +100,7 @@ Page({
    * 导航标签切换
    */
   onTabChange(e) {
+    console.log(e);
     const tab = e.currentTarget.dataset.tab;
     if (this.data.currentTab === tab) {
       return; // 如果点击的是当前标签，不执行任何操作
@@ -551,6 +552,9 @@ Page({
 
   },
 
+  /*
+  onShareAppMessage，onReachBottom，onPullDownRefresh是微信官方定义的函数，地位和onload（）一样
+  */
   /**
    * 页面相关事件处理函数--监听用户下拉动作
    */

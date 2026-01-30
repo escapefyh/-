@@ -556,6 +556,150 @@ OrderSchema.index({ order_no: 1 }); // 订单编号唯一索引
 
 const Order = mongoose.model("Order", OrderSchema);
 
+// 钱包表
+const WalletSchema = new mongoose.Schema({
+    // 钱包ID
+    wallet_id: {
+        type: String,
+        required: true
+    },
+    // 用户ID（外键，唯一）
+    user_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 账户余额
+    balance: {
+        type: Number,
+        required: true,
+        default: 0.00
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 更新时间
+    update_time: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引
+WalletSchema.index({ user_id: 1 }); // 便于查询用户的钱包
+
+const Wallet = mongoose.model("Wallet", WalletSchema);
+
+// 充值记录表
+const RechargeRecordSchema = new mongoose.Schema({
+    // 记录ID
+    record_id: {
+        type: String,
+        required: true
+    },
+    // 充值订单ID（唯一标识）
+    order_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 用户ID（外键）
+    user_id: {
+        type: String,
+        required: true
+    },
+    // 充值金额
+    amount: {
+        type: Number,
+        required: true
+    },
+    // 充值前余额
+    balance_before: {
+        type: Number,
+        required: true
+    },
+    // 充值后余额
+    balance_after: {
+        type: Number,
+        required: true
+    },
+    // 充值时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 状态（success/failed）
+    status: {
+        type: String,
+        enum: ['success', 'failed'],
+        default: 'success'
+    }
+});
+
+// 添加索引
+RechargeRecordSchema.index({ user_id: 1 }); // 便于查询用户的充值记录
+RechargeRecordSchema.index({ order_id: 1 }); // 订单ID唯一索引
+
+const RechargeRecord = mongoose.model("RechargeRecord", RechargeRecordSchema);
+
+// 支付记录表
+const PaymentRecordSchema = new mongoose.Schema({
+    // 记录ID
+    record_id: {
+        type: String,
+        required: true
+    },
+    // 订单ID（外键）
+    order_id: {
+        type: String,
+        required: true
+    },
+    // 用户ID（外键）
+    user_id: {
+        type: String,
+        required: true
+    },
+    // 支付金额
+    pay_amount: {
+        type: Number,
+        required: true
+    },
+    // 支付前余额
+    balance_before: {
+        type: Number,
+        required: true
+    },
+    // 支付后余额
+    balance_after: {
+        type: Number,
+        required: true
+    },
+    // 支付方式（wallet/wechat/alipay）
+    pay_method: {
+        type: String,
+        default: 'wallet'
+    },
+    // 支付时间
+    pay_time: {
+        type: Number,
+        required: true
+    },
+    // 状态（success/failed）
+    status: {
+        type: String,
+        enum: ['success', 'failed'],
+        default: 'success'
+    }
+});
+
+// 添加索引
+PaymentRecordSchema.index({ user_id: 1 }); // 便于查询用户的支付记录
+PaymentRecordSchema.index({ order_id: 1 }); // 便于查询订单的支付记录
+
+const PaymentRecord = mongoose.model("PaymentRecord", PaymentRecordSchema);
+
 module.exports = {
     User,
     Goods,
@@ -567,5 +711,8 @@ module.exports = {
     ChatMessage,
     SpecOption,
     Address,
-    Order
+    Order,
+    Wallet,
+    RechargeRecord,
+    PaymentRecord
 };

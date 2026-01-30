@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods, Address, SpecOption, Order } = require('../db');
+const mongoose = require('mongoose');
+const { User, Goods, Address, SpecOption, Order, Wallet, PaymentRecord } = require('../db');
 
 // 生成订单编号（格式：ORD + 年月日 + 时间戳后9位 + 随机数3位）
 const generateOrderNo = () => {
@@ -562,36 +563,116 @@ router.post('/pay', async (req, res) => {
         const { user_id, order_id } = req.body;
 
         // 1. 参数验证
-        if (!user_id || !order_id) {
-            return res.status(200).json({
+        if (!user_id) {
+            return res.status(401).json({
+                msg: "error",
+                error: "未登录"
+            });
+        }
+
+        if (!order_id) {
+            return res.status(400).json({
                 msg: "error",
                 error: "参数错误"
             });
         }
 
-        // 2. 查询订单并验证归属
-        const order = await Order.findOne({ 
-            order_id: order_id,
-            user_id: user_id
-        });
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        
+        if (!user) {
+            return res.status(400).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 查询订单（先查询订单是否存在）
+        const order = await Order.findOne({ order_id: order_id }).lean();
 
         if (!order) {
-            return res.status(200).json({
+            return res.status(400).json({
                 msg: "error",
-                error: "订单不存在或不属于当前用户"
+                error: "订单不存在"
             });
         }
 
-        // 3. 验证订单状态（只有 pending 状态的订单可以支付）
+        // 4. 验证订单归属（订单不属于当前用户）
+        if (order.user_id !== user_id) {
+            return res.status(403).json({
+                msg: "error",
+                error: "权限不足"
+            });
+        }
+
+        // 5. 验证订单状态（只有 pending 状态的订单可以支付）
         if (order.status !== 'pending') {
-            return res.status(200).json({
+            return res.status(400).json({
                 msg: "error",
-                error: "订单状态不允许支付"
+                error: "订单状态错误"
             });
         }
 
-        // 4. 更新订单状态（实际项目中这里应该调用支付接口）
+        // 6. 获取或创建钱包
+        let wallet = await Wallet.findOne({ user_id: user_id }).lean();
+        
+        if (!wallet) {
+            // 如果钱包不存在，创建新钱包
+            const { v4: uuidv4 } = await import('uuid');
+            const currentTime = new Date().getTime();
+            
+            const newWallet = await Wallet.create({
+                wallet_id: uuidv4(),
+                user_id: user_id,
+                balance: 0.00,
+                create_time: currentTime,
+                update_time: currentTime
+            });
+            
+            wallet = newWallet.toObject();
+        }
+        
+        const balanceBefore = parseFloat(wallet.balance.toFixed(2));
+        const orderAmount = parseFloat(order.total_price.toFixed(2));
+
+        // 7. 检查余额是否充足
+        if (balanceBefore < orderAmount) {
+            return res.status(400).json({
+                msg: "error",
+                error: "余额不足"
+            });
+        }
+
+        // 8. 计算支付后余额
+        const balanceAfter = parseFloat((balanceBefore - orderAmount).toFixed(2));
         const currentTime = new Date().getTime();
+
+        // 9. 使用原子操作更新钱包余额（防止并发问题）
+        // 注意：MongoDB 单机模式不支持事务，使用原子操作确保数据一致性
+        const walletUpdateResult = await Wallet.findOneAndUpdate(
+            { 
+                user_id: user_id,
+                balance: { $gte: orderAmount } // 确保余额足够
+            },
+            {
+                $set: {
+                    balance: balanceAfter,
+                    update_time: currentTime
+                }
+            },
+            { 
+                new: true
+            }
+        );
+
+        if (!walletUpdateResult) {
+            return res.status(400).json({
+                msg: "error",
+                error: "余额不足"
+            });
+        }
+
+        // 10. 更新订单状态
         await Order.updateOne(
             { order_id: order_id },
             {
@@ -602,18 +683,38 @@ router.post('/pay', async (req, res) => {
             }
         );
 
+        // 11. 创建支付记录
+        const { v4: uuidv4 } = await import('uuid');
+        await PaymentRecord.create({
+            record_id: uuidv4(),
+            order_id: order_id,
+            user_id: user_id,
+            pay_amount: orderAmount,
+            balance_before: balanceBefore,
+            balance_after: balanceAfter,
+            pay_method: 'wallet',
+            pay_time: currentTime,
+            status: 'success'
+        });
+
+        // 12. 返回成功响应
         res.json({
             msg: "success",
             data: {
                 order_id: order_id,
-                status: "paid"
+                order_status: "paid",
+                pay_amount: orderAmount,
+                balance_after: balanceAfter,
+                pay_time: formatISO8601(currentTime)
             }
         });
     } catch (error) {
         console.log('支付订单失败:', error);
-        res.status(200).json({
+        console.log('错误详情:', error.message);
+        console.log('错误堆栈:', error.stack);
+        res.status(500).json({
             msg: "error",
-            error: "支付订单失败"
+            error: "服务器错误"
         });
     }
 });

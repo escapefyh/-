@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "我的钱包",
+  "navigationBarBackgroundColor": "#667eea",
+  "navigationBarTextStyle": "white",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}
+
+
+

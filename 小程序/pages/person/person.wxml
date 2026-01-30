@@ -22,6 +22,11 @@
         <view class="menu-text">我的订单</view>
         <view class="menu-arrow">></view>
       </view>
+      <view class="menu-item" bind:tap="goToWallet">
+        <view class="menu-icon">💰</view>
+        <view class="menu-text">我的钱包</view>
+        <view class="menu-arrow">></view>
+      </view>
       <view class="menu-item" bind:tap="goToGoodsManage">
         <view class="menu-icon">📋</view>
         <view class="menu-text">商品管理</view>

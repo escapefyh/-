@@ -27,7 +27,14 @@ Page({
     hasMore: true,
     
     // 空状态
-    isEmpty: false
+    isEmpty: false,
+    
+    // 支付弹窗相关
+    showPayModal: false,     // 是否显示支付弹窗
+    currentPayOrder: null,   // 当前待支付的订单信息
+    walletBalance: 0,        // 钱包余额（数字）
+    walletBalanceFormatted: '0.00',  // 钱包余额（格式化字符串）
+    payAmountFormatted: '0.00'  // 支付金额（格式化字符串）
   },
 
   /**
@@ -405,7 +412,7 @@ Page({
   /**
    * 去付款
    */
-  onPayOrder(e) {
+  async onPayOrder(e) {
     const order_id = e.currentTarget.dataset.orderId;
     if (!order_id) return;
     
@@ -421,22 +428,117 @@ Page({
       return;
     }
     
-    // 跳转到支付页面或调用支付接口
-    // 这里暂时显示提示，实际应该调用支付接口
-    wx.showModal({
-      title: '支付订单',
-      content: `订单金额：¥${order.total_price_formatted || '0.00'}\n\n支付功能开发中...`,
-      showCancel: false
-    });
+    // 打开支付弹窗
+    await this.openPayModal(order);
+  },
+
+  /**
+   * 打开支付弹窗
+   */
+  async openPayModal(order) {
+    const user_id = wx.getStorageSync('user_id');
     
-    // 实际支付流程（示例）
-    // this.payOrder(order_id);
+    try {
+      // 获取钱包余额
+      const balanceResult = await ajax(`/wallet/balance?user_id=${user_id}`, 'GET', {});
+      let balance = 0;
+      if (balanceResult?.msg === 'success') {
+        balance = parseFloat(balanceResult.data?.balance || 0);
+      }
+      
+      // 格式化金额
+      const payAmount = parseFloat(order.total_price || order.total_price_formatted || 0);
+      const balanceNum = parseFloat(balance) || 0;
+      
+      // 确保订单有格式化后的价格
+      if (!order.total_price_formatted) {
+        order.total_price_formatted = payAmount.toFixed(2);
+      }
+      
+      this.setData({
+        showPayModal: true,
+        currentPayOrder: order,
+        walletBalance: balanceNum,
+        walletBalanceFormatted: balanceNum.toFixed(2),
+        payAmountFormatted: payAmount.toFixed(2)
+      });
+    } catch (error) {
+      console.error('获取余额失败:', error);
+      // 即使获取余额失败，也显示支付弹窗
+      const payAmount = parseFloat(order.total_price || order.total_price_formatted || 0);
+      if (!order.total_price_formatted) {
+        order.total_price_formatted = payAmount.toFixed(2);
+      }
+      this.setData({
+        showPayModal: true,
+        currentPayOrder: order,
+        walletBalance: 0,
+        walletBalanceFormatted: '0.00',
+        payAmountFormatted: payAmount.toFixed(2)
+      });
+    }
+  },
+
+  /**
+   * 关闭支付弹窗
+   */
+  onClosePayModal() {
+    this.setData({
+      showPayModal: false,
+      currentPayOrder: null,
+      walletBalance: 0,
+      walletBalanceFormatted: '0.00',
+      payAmountFormatted: '0.00'
+    });
+  },
+
+  /**
+   * 确认支付
+   */
+  async onConfirmPay() {
+    const { currentPayOrder, walletBalance } = this.data;
+    
+    if (!currentPayOrder || !currentPayOrder.order_id) {
+      wx.showToast({
+        title: '订单信息不存在',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const payAmount = parseFloat(currentPayOrder.total_price || currentPayOrder.total_price_formatted || 0);
+
+    // 检查余额
+    if (walletBalance < payAmount) {
+      wx.showModal({
+        title: '余额不足',
+        content: `当前余额：¥${walletBalance.toFixed(2)}\n支付金额：¥${payAmount.toFixed(2)}\n\n余额不足，请先充值`,
+        confirmText: '去充值',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            // 关闭支付弹窗
+            this.onClosePayModal();
+            // 跳转到钱包页面
+            setTimeout(() => {
+              wx.navigateTo({
+                url: '/pkg_user/wallet/wallet'
+              });
+            }, 300);
+          }
+        }
+      });
+      return;
+    }
+
+    // 执行支付
+    await this.doPay(currentPayOrder.order_id);
   },
 
   /**
    * 执行支付订单
    */
-  async payOrder(order_id) {
+  async doPay(order_id) {
     try {
       wx.showLoading({
         title: '支付中...',
@@ -456,6 +558,10 @@ Page({
           title: '支付成功',
           icon: 'success'
         });
+        
+        // 关闭支付弹窗
+        this.onClosePayModal();
+        
         // 刷新订单列表
         this.loadOrderList(true);
       } else {
@@ -502,5 +608,12 @@ Page({
       title: '我的订单',
       path: '/pkg_goods/order/order'
     };
+  },
+
+  /**
+   * 阻止事件冒泡
+   */
+  stopPropagation() {
+    // 空函数，用于阻止事件冒泡
   }
 })

@@ -176,6 +176,60 @@
       </view>
     </view>
   </view>
+
+  <!-- 支付弹窗 -->
+  <view wx:if="{{showPayModal}}" class="pay-modal-mask" bind:tap="onClosePayModal">
+    <view class="pay-modal-content" catch:tap="stopPropagation">
+      <!-- 弹窗头部 -->
+      <view class="pay-modal-header">
+        <text class="pay-modal-title">确认支付</text>
+        <view class="pay-modal-close" bind:tap="onClosePayModal">×</view>
+      </view>
+
+      <!-- 支付信息 -->
+      <view class="pay-modal-body">
+        <!-- 支付方式（模拟） -->
+        <view class="pay-method-section">
+          <view class="pay-method-item pay-method-active">
+            <image class="pay-method-icon" src="/assets/wechat_pay.png" mode="aspectFit" />
+            <text class="pay-method-name">微信支付</text>
+            <text class="pay-method-check">✓</text>
+          </view>
+        </view>
+
+        <!-- 支付金额 -->
+        <view class="pay-amount-section">
+          <text class="pay-amount-label">支付金额</text>
+          <text class="pay-amount-value">¥{{payAmountFormatted}}</text>
+        </view>
+
+        <!-- 余额信息 -->
+        <view class="balance-info-section">
+          <text class="balance-label">账户余额：</text>
+          <text class="balance-value">¥{{walletBalanceFormatted}}</text>
+        </view>
+
+        <!-- 余额不足提示 -->
+        <view wx:if="{{walletBalance < payAmount}}" class="balance-warning">
+          <text>⚠️ 余额不足，请先充值</text>
+        </view>
+      </view>
+
+      <!-- 弹窗底部 -->
+      <view class="pay-modal-footer">
+        <view class="pay-total">
+          <text class="pay-total-label">合计：</text>
+          <text class="pay-total-value">¥{{payAmountFormatted}}</text>
+        </view>
+        <view 
+          class="pay-confirm-btn {{walletBalance < payAmount ? 'pay-confirm-btn-disabled' : ''}}" 
+          bind:tap="onConfirmPay"
+        >
+          <text class="pay-confirm-btn-text">确认支付</text>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>
 
 

@@ -20,7 +20,8 @@
         "addressedit/addressedit",
         "settings/settings",
         "changepassword/changepassword",
-        "collect/collect"
+        "collect/collect",
+        "wallet/wallet"
       ]
     },
     {

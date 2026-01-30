@@ -40,6 +40,16 @@ Page({
   },
 
   /**
+   * 跳转到我的钱包页面
+   */
+  goToWallet() {
+    // ✅ 路径：pkg_user 分包
+    wx.navigateTo({
+      url: '/pkg_user/wallet/wallet'
+    });
+  },
+
+  /**
    * 跳转到商品管理页面
    */
   goToGoodsManage() {

@@ -27,7 +27,9 @@
       </view>
     </view>
   </view>
-
+<!-- 只要触发了绑定事件，就会生成一个对象并传入js，通常在js里面用e来接收。
+在e.detail里面会有官方定义好的参数，自己也可以强行传入参数，data-名字="值"
+最后在e.currentTarget.dataset中可以找到 -->
   <!-- 导航栏 -->
   <view class="nav-section">
     <view class="nav-tabs">

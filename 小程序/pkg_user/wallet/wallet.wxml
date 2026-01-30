@@ -1,0 +1,104 @@
+<!--pkg_user/wallet/wallet.wxml-->
+<view class="wallet-page">
+  <!-- 余额显示区域 -->
+  <view class="balance-section">
+    <view class="balance-label">账户余额（元）</view>
+    <view class="balance-amount">
+      <text class="balance-symbol">¥</text>
+      <text class="balance-value">{{balance}}</text>
+    </view>
+  </view>
+
+  <!-- 充值按钮 -->
+  <view class="recharge-section">
+    <t-button 
+      theme="primary" 
+      size="large" 
+      bind:tap="onOpenRechargeModal"
+      class="recharge-btn"
+    >
+      充值
+    </t-button>
+  </view>
+
+  <!-- 充值记录提示（可选，后续可扩展） -->
+  <view class="tips-section">
+    <text class="tips-text">💡 提示：充值后余额立即到账</text>
+  </view>
+
+  <!-- 充值弹窗 -->
+  <view 
+    class="recharge-modal {{showRechargeModal ? 'show' : ''}}" 
+    catchtap="onCloseRechargeModal"
+  >
+    <view class="recharge-modal-content" catchtap="stopPropagation">
+      <!-- 弹窗头部 -->
+      <view class="modal-header">
+        <text class="modal-title">充值</text>
+        <view class="modal-close" catchtap="onCloseRechargeModal">×</view>
+      </view>
+
+      <!-- 弹窗内容 -->
+      <view class="modal-body">
+        <!-- 预设金额选择 -->
+        <view class="amount-section">
+          <view class="section-title">选择充值金额</view>
+          <view class="amount-list">
+            <view 
+              wx:for="{{rechargeAmounts}}" 
+              wx:key="index"
+              class="amount-item {{!isCustomMode && selectedAmount === item ? 'amount-item-active' : ''}}"
+              data-amount="{{item}}"
+              bind:tap="onSelectAmount"
+            >
+              <text>¥{{item}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 自定义金额 -->
+        <view class="custom-section">
+          <view class="section-title">或输入自定义金额</view>
+          <view class="custom-input-wrapper">
+            <text class="custom-symbol">¥</text>
+            <input 
+              class="custom-input"
+              type="digit"
+              placeholder="请输入充值金额"
+              value="{{customAmount}}"
+              bindinput="onCustomAmountInput"
+              bind:focus="onSwitchToCustom"
+              maxlength="10"
+            />
+          </view>
+          <view class="custom-tip">
+            <text>单次充值金额：1元 - 10000元</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 弹窗底部 -->
+      <view class="modal-footer">
+        <t-button 
+          theme="default" 
+          size="large" 
+          bind:tap="onCloseRechargeModal"
+          class="modal-btn-cancel"
+        >
+          取消
+        </t-button>
+        <t-button 
+          theme="primary" 
+          size="large" 
+          bind:tap="onConfirmRecharge"
+          class="modal-btn-confirm"
+        >
+          确认充值
+        </t-button>
+      </view>
+    </view>
+  </view>
+</view>
+
+
+

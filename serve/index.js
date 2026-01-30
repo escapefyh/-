@@ -36,6 +36,7 @@ const chatRoutes = require('./routes/chat');
 const addressRoutes = require('./routes/address');
 const recognizeRoutes = require('./routes/recognize');
 const appRoutes = require('./routes/app');
+const walletRoutes = require('./routes/wallet');
 
 // 注册路由
 app.use('/', registerRoutes);         // /register
@@ -55,6 +56,7 @@ app.use('/chat', chatRoutes);          // /chat/create
 app.use('/address', addressRoutes);   // /address/list, /address/detail, /address/add, /address/update, /address/delete, /address/setDefault
 app.use('/', recognizeRoutes);        // /recognize
 app.use('/app', appRoutes);           // /app/about, /app/privacy
+app.use('/wallet', walletRoutes);     // /wallet/balance, /wallet/recharge
 
 // 启动服务
 app.listen(3000,() => {

@@ -26,7 +26,15 @@ Page({
     selectedAddress: null,   // 选中的地址
     selectedSpec: null,      // 选中的规格
     quantity: 1,             // 购买数量
-    totalPrice: 0            // 总价
+    totalPrice: 0,           // 总价
+    
+    // 支付弹窗相关
+    showPayModal: false,     // 是否显示支付弹窗
+    currentOrderId: null,    // 当前待支付的订单ID
+    payAmount: 0,            // 支付金额（数字）
+    payAmountFormatted: '0.00',  // 支付金额（格式化字符串）
+    walletBalance: 0,        // 钱包余额（数字）
+    walletBalanceFormatted: '0.00'  // 钱包余额（格式化字符串）
   },
 
   /**
@@ -776,20 +784,13 @@ Page({
       wx.hideLoading();
       
       if (result?.msg === 'success') {
-        wx.showToast({
-          title: '订单创建成功',
-          icon: 'success'
-        });
+        const order_id = result.data?.order_id;
         
-        // 关闭弹窗
+        // 关闭购买弹窗
         this.onCloseBuyModal();
         
-        // 跳转到订单页面
-        setTimeout(() => {
-          wx.navigateTo({
-            url: '/pkg_trade/order/order'
-          });
-        }, 1500);
+        // 打开支付弹窗
+        await this.openPayModal(order_id, parseFloat(this.data.totalPrice));
       } else {
         wx.showToast({
           title: result?.error || '订单创建失败',
@@ -803,6 +804,154 @@ Page({
       wx.showToast({
         title: '网络异常，请重试',
         icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 打开支付弹窗
+   */
+  async openPayModal(order_id, amount) {
+    const user_id = wx.getStorageSync('user_id');
+    
+    try {
+      // 获取钱包余额
+      const balanceResult = await ajax(`/wallet/balance?user_id=${user_id}`, 'GET', {});
+      let balance = 0;
+      if (balanceResult?.msg === 'success') {
+        balance = parseFloat(balanceResult.data?.balance || 0);
+      }
+      
+      // 格式化金额
+      const payAmountNum = parseFloat(amount) || 0;
+      const balanceNum = parseFloat(balance) || 0;
+      
+      this.setData({
+        showPayModal: true,
+        currentOrderId: order_id,
+        payAmount: payAmountNum,
+        payAmountFormatted: payAmountNum.toFixed(2),
+        walletBalance: balanceNum,
+        walletBalanceFormatted: balanceNum.toFixed(2)
+      });
+    } catch (error) {
+      console.error('获取余额失败:', error);
+      // 即使获取余额失败，也显示支付弹窗
+      const payAmountNum = parseFloat(amount) || 0;
+      this.setData({
+        showPayModal: true,
+        currentOrderId: order_id,
+        payAmount: payAmountNum,
+        payAmountFormatted: payAmountNum.toFixed(2),
+        walletBalance: 0,
+        walletBalanceFormatted: '0.00'
+      });
+    }
+  },
+
+  /**
+   * 关闭支付弹窗
+   */
+  onClosePayModal() {
+    this.setData({
+      showPayModal: false,
+      currentOrderId: null,
+      payAmount: 0,
+      payAmountFormatted: '0.00',
+      walletBalance: 0,
+      walletBalanceFormatted: '0.00'
+    });
+  },
+
+  /**
+   * 确认支付
+   */
+  async onConfirmPay() {
+    const { currentOrderId, payAmount, walletBalance } = this.data;
+    
+    if (!currentOrderId) {
+      wx.showToast({
+        title: '订单ID不存在',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 检查余额
+    if (walletBalance < payAmount) {
+      wx.showModal({
+        title: '余额不足',
+        content: `当前余额：¥${walletBalance.toFixed(2)}\n支付金额：¥${payAmount.toFixed(2)}\n\n余额不足，请先充值`,
+        confirmText: '去充值',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            // 关闭支付弹窗
+            this.onClosePayModal();
+            // 跳转到钱包页面
+            setTimeout(() => {
+              wx.navigateTo({
+                url: '/pkg_user/wallet/wallet'
+              });
+            }, 300);
+          }
+        }
+      });
+      return;
+    }
+
+    // 执行支付
+    await this.doPay(currentOrderId);
+  },
+
+  /**
+   * 执行支付
+   */
+  async doPay(order_id) {
+    const user_id = wx.getStorageSync('user_id');
+    
+    try {
+      wx.showLoading({
+        title: '支付中...',
+        mask: true
+      });
+
+      const result = await ajax('/order/pay', 'POST', {
+        user_id: user_id,
+        order_id: order_id
+      });
+
+      wx.hideLoading();
+
+      if (result?.msg === 'success') {
+        wx.showToast({
+          title: '支付成功',
+          icon: 'success'
+        });
+        
+        // 关闭支付弹窗
+        this.onClosePayModal();
+        
+        // 跳转到订单页面
+        setTimeout(() => {
+          wx.redirectTo({
+            url: '/pkg_goods/order/order?status=paid'
+          });
+        }, 1500);
+      } else {
+        wx.showToast({
+          title: result?.error || '支付失败',
+          icon: 'none',
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('支付失败:', error);
+      wx.showToast({
+        title: error?.msg || '网络请求失败',
+        icon: 'none',
+        duration: 3000
       });
     }
   }
