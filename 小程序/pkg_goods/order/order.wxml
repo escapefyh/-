@@ -77,45 +77,77 @@
       <view class="order-footer">
         <text class="order-time">{{item.create_time_formatted || ''}}</text>
         <view class="order-actions">
-          <!-- 待付款：取消订单、去付款 -->
-          <view 
-            wx:if="{{item.status === 'pending'}}"
-            class="action-btn action-btn-secondary"
-            catch:tap="onCancelOrder"
-            data-order-id="{{item.order_id}}"
-          >
-            <text>取消订单</text>
-          </view>
-          <view 
-            wx:if="{{item.status === 'pending'}}"
-            class="action-btn action-btn-primary"
-            catch:tap="onPayOrder"
-            data-order-id="{{item.order_id}}"
-          >
-            <text>去付款</text>
-          </view>
+          <!-- 我买到的页面操作按钮 -->
+          <block wx:if="{{pageType === 'bought'}}">
+            <!-- 待付款：取消订单、去付款 -->
+            <view 
+              wx:if="{{item.status === 'pending'}}"
+              class="action-btn action-btn-secondary"
+              catch:tap="onCancelOrder"
+              data-order-id="{{item.order_id}}"
+            >
+              <text>取消订单</text>
+            </view>
+            <view 
+              wx:if="{{item.status === 'pending'}}"
+              class="action-btn action-btn-primary"
+              catch:tap="onPayOrder"
+              data-order-id="{{item.order_id}}"
+            >
+              <text>去付款</text>
+            </view>
 
-          <!-- 待发货：取消订单 -->
-          <view 
-            wx:if="{{item.status === 'paid'}}"
-            class="action-btn action-btn-secondary"
-            catch:tap="onCancelOrder"
-            data-order-id="{{item.order_id}}"
-          >
-            <text>取消订单</text>
-          </view>
+            <!-- 待发货：取消订单 -->
+            <view 
+              wx:if="{{item.status === 'paid'}}"
+              class="action-btn action-btn-secondary"
+              catch:tap="onCancelOrder"
+              data-order-id="{{item.order_id}}"
+            >
+              <text>取消订单</text>
+            </view>
 
-          <!-- 待收货：确认收货 -->
-          <view 
-            wx:if="{{item.status === 'shipped'}}"
-            class="action-btn action-btn-primary"
-            catch:tap="onConfirmReceive"
-            data-order-id="{{item.order_id}}"
-          >
-            <text>确认收货</text>
-          </view>
+            <!-- 待收货：确认收货 -->
+            <view 
+              wx:if="{{item.status === 'shipped'}}"
+              class="action-btn action-btn-primary"
+              catch:tap="onConfirmReceive"
+              data-order-id="{{item.order_id}}"
+            >
+              <text>确认收货</text>
+            </view>
 
-          <!-- 已完成、已取消：无操作按钮 -->
+            <!-- 待评价：去评价 -->
+            <view 
+              wx:if="{{item.status === 'review'}}"
+              class="action-btn action-btn-primary"
+              catch:tap="onReviewOrder"
+              data-order-id="{{item.order_id}}"
+            >
+              <text>去评价</text>
+            </view>
+          </block>
+
+          <!-- 我卖出的页面操作按钮 -->
+          <block wx:if="{{pageType === 'sold'}}">
+            <!-- 待发货：发货 -->
+            <view 
+              wx:if="{{item.status === 'paid'}}"
+              class="action-btn action-btn-primary"
+              catch:tap="onShipOrder"
+              data-order-id="{{item.order_id}}"
+            >
+              <text>发货</text>
+            </view>
+
+            <!-- 待收货：等待买家确认收货（无操作按钮，显示提示） -->
+            <view 
+              wx:if="{{item.status === 'shipped'}}"
+              class="action-btn action-btn-disabled"
+            >
+              <text>等待买家确认收货</text>
+            </view>
+          </block>
         </view>
       </view>
     </view>

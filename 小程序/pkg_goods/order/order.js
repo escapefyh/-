@@ -7,15 +7,11 @@ Page({
    * 页面的初始数据
    */
   data: {
-    // 订单状态筛选
-    statusTabs: [
-      { key: 'all', label: '全部' },
-      { key: 'pending', label: '待付款' },
-      { key: 'paid', label: '待发货' },
-      { key: 'shipped', label: '待收货' },
-      { key: 'completed', label: '已完成' },
-      { key: 'cancelled', label: '已取消' }
-    ],
+    // 页面类型：sold-我卖出的，bought-我买到的，默认为bought
+    pageType: 'bought',
+    
+    // 订单状态筛选（根据页面类型动态设置）
+    statusTabs: [],
     activeStatus: 'all', // 当前选中的状态
     
     // 订单列表
@@ -41,13 +37,60 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    // 获取页面类型：sold-我卖出的，bought-我买到的
+    const pageType = options.type || 'bought';
+    
+    // 根据页面类型设置顶部栏
+    this.setStatusTabs(pageType);
+    
+    // 设置页面标题
+    const pageTitle = pageType === 'sold' ? '我卖出的' : '我买到的';
+    wx.setNavigationBarTitle({
+      title: pageTitle
+    });
+    
     // 如果从其他页面传入状态筛选，使用传入的状态
     if (options.status) {
       this.setData({
         activeStatus: options.status
       });
     }
+    
+    this.setData({
+      pageType: pageType
+    });
+    
     this.loadOrderList(true);
+  },
+
+  /**
+   * 根据页面类型设置顶部栏
+   */
+  setStatusTabs(pageType) {
+    let tabs = [];
+    
+    if (pageType === 'sold') {
+      // 我卖出的：全部、待发货、待收货、已完成
+      tabs = [
+        { key: 'all', label: '全部' },
+        { key: 'paid', label: '待发货' },
+        { key: 'shipped', label: '待收货' },
+        { key: 'completed', label: '已完成' }
+      ];
+    } else {
+      // 我买到的：全部、待付款、待发货、待收货、待评价
+      tabs = [
+        { key: 'all', label: '全部' },
+        { key: 'pending', label: '待付款' },
+        { key: 'paid', label: '待发货' },
+        { key: 'shipped', label: '待收货' },
+        { key: 'review', label: '待评价' }
+      ];
+    }
+    
+    this.setData({
+      statusTabs: tabs
+    });
   },
 
   /**
@@ -106,19 +149,26 @@ Page({
     try {
       const currentPage = isRefresh ? 1 : this.data.page;
       const status = this.data.activeStatus === 'all' ? '' : this.data.activeStatus;
+      const pageType = this.data.pageType || 'bought';
       
-      const result = await ajax(
-        `/order/list?user_id=${user_id}&status=${status}&page=${currentPage}&pageSize=${this.data.pageSize}`,
-        'GET',
-        {}
-      );
+      // 根据页面类型调用不同的接口
+      let apiUrl = '';
+      if (pageType === 'sold') {
+        // 我卖出的：查询seller_id = user_id的订单
+        apiUrl = `/order/sold/list?user_id=${user_id}&status=${status}&page=${currentPage}&pageSize=${this.data.pageSize}`;
+      } else {
+        // 我买到的：查询buyer_id = user_id的订单
+        apiUrl = `/order/bought/list?user_id=${user_id}&status=${status}&page=${currentPage}&pageSize=${this.data.pageSize}`;
+      }
+      
+      const result = await ajax(apiUrl, 'GET', {});
 
       if (result?.msg === 'success') {
         const list = result.data?.list || [];
         const total = result.data?.total || 0;
 
         // 处理订单数据，格式化时间、价格等
-        const processedList = list.map(order => {
+        const processedList = await Promise.all(list.map(async (order) => {
           // 格式化创建时间
           if (order.create_time) {
             order.create_time_formatted = this.formatTime(order.create_time);
@@ -127,18 +177,73 @@ Page({
           // 格式化订单状态显示文本
           order.status_text = this.getStatusText(order.status);
           
-          // 确保商品图片是数组
-          if (order.goods_image && !Array.isArray(order.goods_image)) {
-            order.goods_image = [order.goods_image];
+          // 处理商品信息
+          // 支持多种字段名：goods_image/goods_img/image/images
+          let goodsImage = order.goods_image || order.goods_img || order.image || order.images || null;
+          
+          // 如果订单中没有商品图片，但有goods_id，尝试获取商品信息
+          if (!goodsImage && order.goods_id) {
+            try {
+              const goodsResult = await ajax(`/goods/detail?goods_id=${order.goods_id}`, 'GET', {});
+              if (goodsResult?.msg === 'success' && goodsResult.data) {
+                const goods = goodsResult.data;
+                // 获取商品图片
+                goodsImage = goods.images || goods.image || goods.goods_image || null;
+                // 获取商品描述
+                if (!order.goods_description) {
+                  order.goods_description = goods.description || goods.goods_description || goods.name || '商品描述';
+                }
+              }
+            } catch (error) {
+              console.error('获取商品信息失败:', error);
+            }
           }
           
-          // 处理价格显示
-          if (order.total_price !== undefined) {
-            order.total_price_formatted = parseFloat(order.total_price).toFixed(2);
+          // 确保商品图片是数组
+          if (goodsImage) {
+            if (Array.isArray(goodsImage)) {
+              order.goods_image = goodsImage.filter(img => img); // 过滤空值
+            } else if (typeof goodsImage === 'string') {
+              // 如果是字符串，可能是JSON字符串或单个URL
+              try {
+                const parsed = JSON.parse(goodsImage);
+                order.goods_image = Array.isArray(parsed) ? parsed : [parsed];
+              } catch (e) {
+                // 不是JSON，当作单个URL
+                order.goods_image = [goodsImage];
+              }
+            } else {
+              order.goods_image = [goodsImage];
+            }
+          } else {
+            order.goods_image = [];
+          }
+          
+          // 处理商品描述：支持多种字段名
+          if (!order.goods_description) {
+            order.goods_description = order.description || order.goods_name || order.name || '商品描述';
+          }
+          
+          // 处理规格名称：支持多种字段名
+          if (!order.spec_name) {
+            order.spec_name = order.spec || order.specification || order.spec_name || null;
+          }
+          
+          // 处理数量
+          if (!order.quantity) {
+            order.quantity = order.qty || order.count || 1;
+          }
+          
+          // 处理价格显示：支持多种字段名
+          let totalPrice = order.total_price || order.price || order.amount || 0;
+          if (totalPrice !== undefined && totalPrice !== null) {
+            order.total_price_formatted = parseFloat(totalPrice).toFixed(2);
+          } else {
+            order.total_price_formatted = '0.00';
           }
           
           return order;
-        });
+        }));
 
         const currentList = isRefresh ? [] : this.data.orderList;
         const newList = [...currentList, ...processedList];
@@ -235,7 +340,8 @@ Page({
       'paid': '待发货',
       'shipped': '待收货',
       'completed': '已完成',
-      'cancelled': '已取消'
+      'cancelled': '已取消',
+      'review': '待评价'
     };
     return statusMap[status] || status;
   },
@@ -337,7 +443,7 @@ Page({
   },
 
   /**
-   * 确认收货
+   * 确认收货（买家操作）
    */
   async onConfirmReceive(e) {
     const order_id = e.currentTarget.dataset.orderId;
@@ -345,6 +451,15 @@ Page({
     
     const order = this.data.orderList.find(item => item.order_id == order_id);
     if (!order) return;
+    
+    // 只有我买到的页面且待收货的订单可以确认收货
+    if (this.data.pageType !== 'bought') {
+      wx.showToast({
+        title: '该功能仅限买家使用',
+        icon: 'none'
+      });
+      return;
+    }
     
     // 只有待收货的订单可以确认收货
     if (order.status !== 'shipped') {
@@ -367,7 +482,7 @@ Page({
   },
 
   /**
-   * 执行确认收货
+   * 执行确认收货（买家操作）
    */
   async confirmReceive(order_id) {
     try {
@@ -401,6 +516,88 @@ Page({
     } catch (error) {
       wx.hideLoading();
       console.error('确认收货失败:', error);
+      wx.showToast({
+        title: error?.msg || '网络请求失败',
+        icon: 'none',
+        duration: 3000
+      });
+    }
+  },
+
+  /**
+   * 发货（商家操作）
+   */
+  async onShipOrder(e) {
+    const order_id = e.currentTarget.dataset.orderId;
+    if (!order_id) return;
+    
+    const order = this.data.orderList.find(item => item.order_id == order_id);
+    if (!order) return;
+    
+    // 只有我卖出的页面且待发货的订单可以发货
+    if (this.data.pageType !== 'sold') {
+      wx.showToast({
+        title: '该功能仅限商家使用',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 只有待发货的订单可以发货
+    if (order.status !== 'paid') {
+      wx.showToast({
+        title: '该订单无法发货',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.showModal({
+      title: '确认发货',
+      content: '确认已发货吗？',
+      success: async (res) => {
+        if (res.confirm) {
+          await this.shipOrder(order_id);
+        }
+      }
+    });
+  },
+
+  /**
+   * 执行发货（商家操作）
+   */
+  async shipOrder(order_id) {
+    try {
+      wx.showLoading({
+        title: '处理中...',
+        mask: true
+      });
+      
+      const user_id = wx.getStorageSync('user_id');
+      const result = await ajax('/order/ship', 'POST', {
+        user_id: user_id,
+        order_id: order_id
+      });
+      
+      wx.hideLoading();
+      
+      if (result?.msg === 'success') {
+        wx.showToast({
+          title: '发货成功',
+          icon: 'success'
+        });
+        // 刷新订单列表
+        this.loadOrderList(true);
+      } else {
+        wx.showToast({
+          title: result?.error || '发货失败',
+          icon: 'none',
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('发货失败:', error);
       wx.showToast({
         title: error?.msg || '网络请求失败',
         icon: 'none',
@@ -608,6 +805,20 @@ Page({
       title: '我的订单',
       path: '/pkg_goods/order/order'
     };
+  },
+
+  /**
+   * 去评价（买家操作）
+   */
+  onReviewOrder(e) {
+    const order_id = e.currentTarget.dataset.orderId;
+    if (!order_id) return;
+    
+    // TODO: 跳转到评价页面
+    wx.showToast({
+      title: '评价功能开发中',
+      icon: 'none'
+    });
   },
 
   /**

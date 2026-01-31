@@ -8,7 +8,14 @@ Page({
    */
   data: {
     wxlogin: false,
-    userinfo: undefined
+    userinfo: undefined,
+    // 统计数据
+    collectCount: 0,      // 收藏数量
+    followCount: 0,       // 关注数量
+    browseCount: 0,       // 历史浏览数量
+    publishedCount: 0,   // 我发布的数量
+    soldCount: 0,        // 我卖出的数量
+    boughtCount: 0       // 我买到的数量
   },
 
   getuserinfo() {
@@ -26,6 +33,58 @@ Page({
     // ✅ 修改：路径改为 pkg_user 分包
     wx.navigateTo({
       url: '/pkg_user/collect/collect'
+    });
+  },
+
+  /**
+   * 跳转到我的关注页面
+   */
+  goToFollow() {
+    // TODO: 创建我的关注页面
+    wx.showToast({
+      title: '功能开发中',
+      icon: 'none'
+    });
+  },
+
+  /**
+   * 跳转到历史浏览页面
+   */
+  goToBrowse() {
+    // TODO: 创建历史浏览页面
+    wx.showToast({
+      title: '功能开发中',
+      icon: 'none'
+    });
+  },
+
+  /**
+   * 跳转到我发布的商品页面
+   */
+  goToPublished() {
+    // 跳转到商品管理页面（我发布的）
+    wx.navigateTo({
+      url: '/pkg_goods/goodsmanage/goodsmanage'
+    });
+  },
+
+  /**
+   * 跳转到我卖出的订单页面
+   */
+  goToSold() {
+    // 跳转到订单页面，显示已卖出的订单
+    wx.navigateTo({
+      url: '/pkg_goods/order/order?type=sold'
+    });
+  },
+
+  /**
+   * 跳转到我买到的订单页面
+   */
+  goToBought() {
+    // 跳转到订单页面，显示已买到的订单
+    wx.navigateTo({
+      url: '/pkg_goods/order/order?type=bought'
     });
   },
 
@@ -105,6 +164,8 @@ Page({
             avatar: userinfo?.avatar || '/assets/default_avatar.png'
           }
         });
+        // 加载统计数据
+        this.loadStatistics(user_id);
       } else {
         // 没有nickname，显示"微信授权"
         this.setData({
@@ -118,6 +179,64 @@ Page({
         wxlogin: false,
         userinfo: undefined
       });
+    }
+  },
+
+  /**
+   * 加载统计数据
+   */
+  async loadStatistics(user_id) {
+    try {
+      // 加载收藏数量
+      const collectResult = await ajax(`/favorite/count?user_id=${user_id}`, 'GET', {});
+      if (collectResult?.msg === 'success') {
+        this.setData({
+          collectCount: collectResult.data?.count || 0
+        });
+      }
+
+      // 加载关注数量
+      const followResult = await ajax(`/follow/count?user_id=${user_id}`, 'GET', {});
+      if (followResult?.msg === 'success') {
+        this.setData({
+          followCount: followResult.data?.count || 0
+        });
+      }
+
+      // 加载历史浏览数量
+      const browseResult = await ajax(`/browse/count?user_id=${user_id}`, 'GET', {});
+      if (browseResult?.msg === 'success') {
+        this.setData({
+          browseCount: browseResult.data?.count || 0
+        });
+      }
+
+      // 加载我发布的数量
+      const publishedResult = await ajax(`/goods/my/count?user_id=${user_id}`, 'GET', {});
+      if (publishedResult?.msg === 'success') {
+        this.setData({
+          publishedCount: publishedResult.data?.count || 0
+        });
+      }
+
+      // 加载我卖出的数量
+      const soldResult = await ajax(`/order/sold/count?user_id=${user_id}`, 'GET', {});
+      if (soldResult?.msg === 'success') {
+        this.setData({
+          soldCount: soldResult.data?.count || 0
+        });
+      }
+
+      // 加载我买到的数量
+      const boughtResult = await ajax(`/order/bought/count?user_id=${user_id}`, 'GET', {});
+      if (boughtResult?.msg === 'success') {
+        this.setData({
+          boughtCount: boughtResult.data?.count || 0
+        });
+      }
+    } catch (error) {
+      console.error('加载统计数据失败:', error);
+      // 静默失败，不影响页面显示
     }
   },
 

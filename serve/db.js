@@ -531,10 +531,10 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    // 订单状态：pending(待支付), paid(已支付), shipped(已发货), completed(已完成), cancelled(已取消)
+    // 订单状态：pending(待支付), paid(已支付), shipped(已发货), review(待评价), completed(已完成), cancelled(已取消)
     status: {
         type: String,
-        enum: ['pending', 'paid', 'shipped', 'completed', 'cancelled'],
+        enum: ['pending', 'paid', 'shipped', 'review', 'completed', 'cancelled'],
         default: 'pending'
     },
     // 创建时间
@@ -544,6 +544,26 @@ const OrderSchema = new mongoose.Schema({
     },
     // 更新时间
     update_time: {
+        type: Number,
+        default: null
+    },
+    // 支付时间
+    pay_time: {
+        type: Number,
+        default: null
+    },
+    // 发货时间
+    ship_time: {
+        type: Number,
+        default: null
+    },
+    // 收货时间
+    receive_time: {
+        type: Number,
+        default: null
+    },
+    // 完成时间
+    complete_time: {
         type: Number,
         default: null
     }
@@ -700,6 +720,68 @@ PaymentRecordSchema.index({ order_id: 1 }); // 便于查询订单的支付记录
 
 const PaymentRecord = mongoose.model("PaymentRecord", PaymentRecordSchema);
 
+// 关注表
+const FollowSchema = new mongoose.Schema({
+    // 关注ID
+    follow_id: {
+        type: String,
+        required: true
+    },
+    // 关注者ID（follower_id）
+    follower_id: {
+        type: String,
+        required: true
+    },
+    // 被关注者ID（following_id）
+    following_id: {
+        type: String,
+        required: true
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    }
+});
+
+// 添加唯一索引，防止重复关注
+FollowSchema.index({ follower_id: 1, following_id: 1 }, { unique: true });
+// 添加索引，便于查询
+FollowSchema.index({ follower_id: 1 }); // 便于查询某个用户关注的所有人
+FollowSchema.index({ following_id: 1 }); // 便于查询某个用户的所有粉丝
+
+const Follow = mongoose.model("Follow", FollowSchema);
+
+// 浏览历史表
+const BrowseHistorySchema = new mongoose.Schema({
+    // 浏览记录ID
+    browse_id: {
+        type: String,
+        required: true
+    },
+    // 用户ID
+    user_id: {
+        type: String,
+        required: true
+    },
+    // 商品ID
+    goods_id: {
+        type: String,
+        required: true
+    },
+    // 浏览时间
+    create_time: {
+        type: Number,
+        required: true
+    }
+});
+
+// 添加索引，便于查询
+BrowseHistorySchema.index({ user_id: 1, create_time: -1 }); // 便于查询某个用户的浏览历史（按时间倒序）
+BrowseHistorySchema.index({ user_id: 1, goods_id: 1 }); // 便于查询某个用户是否浏览过某个商品
+
+const BrowseHistory = mongoose.model("BrowseHistory", BrowseHistorySchema);
+
 module.exports = {
     User,
     Goods,
@@ -714,5 +796,7 @@ module.exports = {
     Order,
     Wallet,
     RechargeRecord,
-    PaymentRecord
+    PaymentRecord,
+    Follow,
+    BrowseHistory
 };

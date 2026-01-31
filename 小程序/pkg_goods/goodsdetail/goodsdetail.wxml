@@ -75,7 +75,15 @@
     </view>
 
     <!-- 购买按钮区域 -->
-    <view class="buy-buttons">
+    <!-- 如果是商家自己，显示管理按钮 -->
+    <view wx:if="{{isOwner}}" class="manage-btn-wrapper">
+      <view class="buy-btn manage-btn" bind:tap="onManageClick">
+        <text class="buy-label">管理</text>
+      </view>
+    </view>
+    
+    <!-- 如果是其他用户，显示购买按钮 -->
+    <view wx:else class="buy-buttons">
       <!-- 未开启拼团：只显示直接买 -->
       <view wx:if="{{!goods.group_buy_enabled}}" class="buy-btn gray-btn" bind:tap="onBuyClick">
         <text class="buy-price">¥{{goods.price}}</text>
@@ -227,6 +235,57 @@
         >
           <text class="pay-confirm-btn-text">确认支付</text>
         </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 管理弹窗 -->
+  <view wx:if="{{showManageModal}}" class="manage-modal-mask" bind:tap="onCloseManageModal">
+    <view class="manage-modal-content" catch:tap="stopPropagationManage">
+      <!-- 弹窗头部 -->
+      <view class="manage-modal-header">
+        <text class="manage-modal-title">管理商品</text>
+        <view class="manage-modal-close" bind:tap="onCloseManageModal">×</view>
+      </view>
+
+      <!-- 弹窗内容 -->
+      <view class="manage-modal-body">
+        <!-- 提示信息 -->
+        <view class="manage-tip">
+          <text>提示：如需进一步修改，请下架后重新发布</text>
+        </view>
+
+        <!-- 商品描述 -->
+        <view class="manage-form-item">
+          <text class="manage-label">商品描述：</text>
+          <textarea 
+            class="manage-textarea" 
+            placeholder="请输入商品描述"
+            value="{{newDescription}}"
+            bindinput="onDescriptionInput"
+            maxlength="500"
+            auto-height
+          />
+        </view>
+
+        <!-- 商品价格 -->
+        <view class="manage-form-item price-item">
+          <text class="manage-label">商品价格：</text>
+          <input 
+            class="manage-input" 
+            type="digit" 
+            placeholder="请输入价格"
+            value="{{newPrice}}"
+            bindinput="onPriceInputManage"
+          />
+          <text class="manage-unit">元</text>
+        </view>
+      </view>
+
+      <!-- 弹窗底部 -->
+      <view class="manage-modal-footer">
+        <view class="manage-btn-cancel" bind:tap="onCloseManageModal">取消</view>
+        <view class="manage-btn-confirm" bind:tap="onConfirmManage">确认</view>
       </view>
     </view>
   </view>

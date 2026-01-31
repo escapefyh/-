@@ -1,0 +1,46 @@
+<!--pkg_goods/paysuccess/paysuccess.wxml-->
+<view class="pay-success-page">
+  <!-- 成功图标和提示 -->
+  <view class="success-content">
+    <image class="success-icon" src="/assets/pay_success.png" mode="aspectFit" />
+    <text class="success-title">支付成功</text>
+    <text class="success-tip">您的订单已支付成功，请等待商家发货</text>
+  </view>
+
+  <!-- 订单信息 -->
+  <view class="order-info-section">
+    <view class="info-item" wx:if="{{orderNo}}">
+      <text class="info-label">订单编号：</text>
+      <text class="info-value">{{orderNo}}</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">支付金额：</text>
+      <text class="info-value price-value">¥{{payAmount}}</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons">
+    <t-button 
+      theme="default" 
+      size="large" 
+      bind:tap="onViewOrder"
+      class="action-btn view-order-btn"
+    >
+      查看订单
+    </t-button>
+    <t-button 
+      theme="primary" 
+      size="large" 
+      bind:tap="onContinueShopping"
+      class="action-btn continue-btn"
+    >
+      继续逛逛
+    </t-button>
+  </view>
+</view>
+
+
+
+
+

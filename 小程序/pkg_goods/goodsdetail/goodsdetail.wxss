@@ -691,6 +691,210 @@
   font-weight: bold;
 }
 
+/* 管理按钮样式 */
+.manage-btn-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  padding: 0 10rpx;
+}
+
+.manage-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 8rpx;
+  border-radius: 8rpx;
+  background-color: #1296db;
+  color: #fff;
+  min-width: 0;
+}
+
+.manage-btn .buy-label {
+  color: #fff;
+  font-weight: bold;
+}
+
+/* 管理弹窗样式 */
+.manage-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manage-modal-content {
+  width: 90%;
+  max-width: 600rpx;
+  max-height: 80vh;
+  background-color: #fff;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  animation: modalFadeIn 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.manage-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.manage-modal-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.manage-modal-close {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  color: #999;
+}
+
+.manage-modal-body {
+  padding: 30rpx;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.manage-tip {
+  padding: 20rpx;
+  background-color: #fff7e6;
+  border-radius: 8rpx;
+  margin-bottom: 30rpx;
+  border-left: 4rpx solid #ff9800;
+}
+
+.manage-tip text {
+  font-size: 26rpx;
+  color: #ff9800;
+  line-height: 1.6;
+}
+
+.manage-form-item {
+  margin-bottom: 30rpx;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.manage-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.manage-label {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+  width: 100%;
+}
+
+.manage-textarea {
+  width: 100%;
+  min-height: 120rpx;
+  padding: 20rpx;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  color: #333;
+  background-color: #fafafa;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.manage-textarea:focus {
+  border-color: #1296db;
+  background-color: #fff;
+}
+
+.manage-form-item.price-item {
+  flex-direction: row;
+  align-items: center;
+}
+
+.manage-form-item.price-item .manage-label {
+  width: auto;
+  margin-bottom: 0;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.manage-input {
+  flex: 1;
+  height: 80rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  color: #333;
+  background-color: #fafafa;
+  box-sizing: border-box;
+}
+
+.manage-input:focus {
+  border-color: #1296db;
+  background-color: #fff;
+}
+
+.manage-unit {
+  font-size: 28rpx;
+  color: #666;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.manage-modal-footer {
+  display: flex;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.manage-btn-cancel,
+.manage-btn-confirm {
+  flex: 1;
+  padding: 30rpx;
+  text-align: center;
+  font-size: 32rpx;
+}
+
+.manage-btn-cancel {
+  color: #666;
+  border-right: 1rpx solid #f0f0f0;
+}
+
+.manage-btn-confirm {
+  color: #1296db;
+  font-weight: bold;
+}
+
 
 
 

@@ -31,7 +31,8 @@
         "goodsdetail/goodsdetail",
         "goodslist/goodslist",
         "goodsmanage/goodsmanage",
-        "order/order"
+        "order/order",
+        "paysuccess/paysuccess"
       ]
     },
     {

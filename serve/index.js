@@ -37,6 +37,8 @@ const addressRoutes = require('./routes/address');
 const recognizeRoutes = require('./routes/recognize');
 const appRoutes = require('./routes/app');
 const walletRoutes = require('./routes/wallet');
+const followRoutes = require('./routes/follow');
+const browseRoutes = require('./routes/browse');
 
 // 注册路由
 app.use('/', registerRoutes);         // /register
@@ -57,6 +59,8 @@ app.use('/address', addressRoutes);   // /address/list, /address/detail, /addres
 app.use('/', recognizeRoutes);        // /recognize
 app.use('/app', appRoutes);           // /app/about, /app/privacy
 app.use('/wallet', walletRoutes);     // /wallet/balance, /wallet/recharge
+app.use('/follow', followRoutes);     // /follow/count
+app.use('/browse', browseRoutes);     // /browse/count
 
 // 启动服务
 app.listen(3000,() => {

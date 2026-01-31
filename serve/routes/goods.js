@@ -3,21 +3,46 @@ const router = express.Router();
 const { User, Goods, Comment, Favorite, SpecOption } = require('../db');
 
 // 处理图片URL，确保返回完整的OSS URL
+// 修改 routes/goods.js 中的 processImageUrls 函数
+
 const processImageUrls = (images) => {
-    if (!images || !Array.isArray(images)) {
+    // 1. 如果是空，直接返回空数组
+    if (!images) return [];
+
+    let imageList = [];
+
+    // 2. 如果是数组，直接使用
+    if (Array.isArray(images)) {
+        imageList = images;
+    } 
+    // 3. 关键修复：如果是字符串，尝试解析 JSON 或作为单图处理
+    else if (typeof images === 'string') {
+        try {
+            // 尝试解析 JSON 字符串，例如 '["url1", "url2"]'
+            const parsed = JSON.parse(images);
+            if (Array.isArray(parsed)) {
+                imageList = parsed;
+            } else {
+                imageList = [images];
+            }
+        } catch (e) {
+            // 解析失败，说明是普通 URL 字符串
+            imageList = [images];
+        }
+    } else {
         return [];
     }
-    
-    return images.map(img => {
-        // 如果已经是完整URL，直接返回
+
+    // 4. 对提取出的 URL 列表进行处理（拼接 OSS 域名等）
+    return imageList.map(img => {
+        if (!img) return '';
+        // 如果已经是完整 URL，直接返回
         if (typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))) {
             return img;
         }
-        // 如果是相对路径，拼接OSS域名（这种情况不应该发生，因为上传时已经返回完整URL）
-        // 但为了兼容性，保留此逻辑
+        // 如果是相对路径，拼接 OSS 域名
         const ossDomain = process.env.OSS_DOMAIN || '';
         if (ossDomain && typeof img === 'string') {
-            // 确保路径格式正确
             const path = img.startsWith('/') ? img.substring(1) : img;
             return `${ossDomain}/${path}`;
         }
@@ -464,6 +489,49 @@ router.get('/getCommentCount', async (req, res) => {
     }
 });
 
+// 获取我发布的数量
+router.get('/my/count', async (req, res) => {
+    try {
+        const { user_id } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 统计该用户发布的所有商品数量（包括已下架的商品）
+        const count = await Goods.countDocuments({
+            user_id: user_id
+        });
+
+        // 4. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                count: count
+            }
+        });
+    } catch (error) {
+        console.log('获取我发布的数量失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
+        });
+    }
+});
+
 // 获取商品收藏数目
 router.get('/getFavoriteCount', async (req, res) => {
     try {
@@ -505,6 +573,155 @@ router.get('/getFavoriteCount', async (req, res) => {
         res.status(200).json({
             msg: "error",
             error: "获取失败"
+        });
+    }
+});
+
+// 格式化时间戳为 ISO 8601 格式
+const formatISO8601 = (timestamp) => {
+    if (!timestamp) return '';
+    return new Date(timestamp).toISOString();
+};
+
+// 更新商品接口（商家管理功能）
+// POST /goods/update
+router.post('/update', async (req, res) => {
+    try {
+        const { goods_id, user_id, description, price } = req.body;
+
+        // 1. 参数验证 - 必填参数
+        if (!goods_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "未登录"
+            });
+        }
+
+        // 2. 验证至少提供了一个修改字段
+        if (description === undefined && price === undefined) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        // 3. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "未登录"
+            });
+        }
+
+        // 4. 查询商品是否存在
+        const goods = await Goods.findOne({ goods_id: goods_id }).lean();
+        if (!goods) {
+            return res.status(200).json({
+                msg: "error",
+                error: "商品不存在"
+            });
+        }
+
+        // 5. 验证权限（只有商品发布者才能更新）
+        if (goods.user_id !== user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "权限不足"
+            });
+        }
+
+        // 6. 验证 description（如果提供）
+        if (description !== undefined) {
+            if (typeof description !== 'string') {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "参数错误"
+                });
+            }
+            
+            const trimmedDescription = description.trim();
+            if (trimmedDescription.length === 0) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "商品描述不能为空"
+                });
+            }
+            
+            if (trimmedDescription.length > 500) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "商品描述最多500字符"
+                });
+            }
+        }
+
+        // 7. 验证 price（如果提供）
+        if (price !== undefined) {
+            const priceNum = parseFloat(price);
+            if (isNaN(priceNum)) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "参数错误"
+                });
+            }
+            
+            if (priceNum < 0) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "商品价格不能为负数"
+                });
+            }
+        }
+
+        // 8. 构建更新对象
+        const updateData = {};
+        if (description !== undefined) {
+            updateData.description = description.trim();
+        }
+        if (price !== undefined) {
+            updateData.price = parseFloat(price);
+        }
+        
+        // 更新 update_time
+        updateData.update_time = new Date().getTime();
+
+        // 9. 更新商品信息
+        const updatedGoods = await Goods.findOneAndUpdate(
+            { goods_id: goods_id },
+            { $set: updateData },
+            { new: true } // 返回更新后的文档
+        ).lean();
+
+        if (!updatedGoods) {
+            return res.status(200).json({
+                msg: "error",
+                error: "更新失败"
+            });
+        }
+
+        // 10. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                goods_id: updatedGoods.goods_id,
+                description: updatedGoods.description,
+                price: updatedGoods.price,
+                update_time: formatISO8601(updatedGoods.update_time)
+            }
+        });
+    } catch (error) {
+        console.log('更新商品失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "服务器错误"
         });
     }
 });

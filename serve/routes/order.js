@@ -19,6 +19,19 @@ const formatISO8601 = (timestamp) => {
     return new Date(timestamp).toISOString();
 };
 
+// 格式化时间戳为 YYYY-MM-DD HH:mm:ss 格式
+const formatDateTime = (timestamp) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // 创建订单接口
 // POST /order/create
 router.post('/create', async (req, res) => {
@@ -411,6 +424,355 @@ router.get('/list', async (req, res) => {
     }
 });
 
+// 我买到的订单列表接口
+// GET /order/bought/list
+router.get('/bought/list', async (req, res) => {
+    try {
+        const { user_id, status, page = 1, pageSize = 10 } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 分页参数验证
+        const pageNum = parseInt(page) || 1;
+        const pageSizeNum = parseInt(pageSize) || 10;
+
+        if (pageNum < 1) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        if (pageSizeNum < 1 || pageSizeNum > 100) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        // 2. 构建查询条件（只返回 buyer_id 等于 user_id 的订单）
+        const query = { user_id: user_id };
+        
+        // 如果传入了状态筛选，添加状态条件
+        if (status !== undefined && status !== null && status !== '' && status !== 'all') {
+            const validStatuses = ['pending', 'paid', 'shipped', 'review', 'completed', 'cancelled'];
+            if (validStatuses.includes(status)) {
+                query.status = status;
+            }
+        }
+
+        const skip = (pageNum - 1) * pageSizeNum;
+        const limit = pageSizeNum;
+
+        // 3. 查询订单列表（按创建时间倒序）
+        const orders = await Order.find(query)
+            .sort({ create_time: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        // 4. 获取所有商品ID和规格ID
+        const goodsIds = [...new Set(orders.map(o => o.goods_id))];
+        const specIds = orders
+            .filter(o => o.spec_id)
+            .map(o => o.spec_id);
+
+        // 5. 批量查询商品信息
+        const goodsList = await Goods.find({ goods_id: { $in: goodsIds } }).lean();
+        const goodsMap = {};
+        const sellerIds = [];
+        goodsList.forEach(goods => {
+            goodsMap[goods.goods_id] = goods;
+            if (goods.user_id) {
+                sellerIds.push(goods.user_id);
+            }
+        });
+
+        // 6. 批量查询卖家信息
+        const sellers = await User.find({ user_id: { $in: sellerIds } }).lean();
+        const sellerMap = {};
+        sellers.forEach(seller => {
+            sellerMap[seller.user_id] = seller;
+        });
+
+        // 7. 批量查询规格信息
+        const specOptions = await SpecOption.find({ 
+            spec_option_id: { $in: specIds } 
+        }).lean();
+        const specMap = {};
+        specOptions.forEach(spec => {
+            specMap[spec.spec_option_id] = spec;
+        });
+
+        // 8. 组装返回数据
+        const result = orders.map(order => {
+            const goods = goodsMap[order.goods_id];
+            const spec = order.spec_id ? specMap[order.spec_id] : null;
+            
+            // 处理商品图片（返回数组格式，必须确保是数组）
+            let goodsImages = [];
+            if (goods && goods.images) {
+                if (Array.isArray(goods.images)) {
+                    goodsImages = processImageUrls(goods.images);
+                } else if (typeof goods.images === 'string') {
+                    // 如果是字符串，尝试解析为JSON，否则作为单个图片URL
+                    try {
+                        const parsed = JSON.parse(goods.images);
+                        goodsImages = Array.isArray(parsed) ? processImageUrls(parsed) : [goods.images];
+                    } catch (e) {
+                        goodsImages = processImageUrls([goods.images]);
+                    }
+                }
+            }
+
+            // 获取卖家ID
+            const sellerId = goods ? goods.user_id : null;
+
+            // 处理商品描述（确保始终返回字符串，不能为null或undefined）
+            let goodsDescription = '';
+            if (goods) {
+                if (goods.description && typeof goods.description === 'string') {
+                    goodsDescription = goods.description;
+                } else if (goods.name && typeof goods.name === 'string') {
+                    goodsDescription = goods.name;
+                } else {
+                    goodsDescription = '商品描述';
+                }
+            } else {
+                goodsDescription = '商品描述';
+            }
+
+            return {
+                order_id: order.order_id,
+                order_no: order.order_no,
+                buyer_id: order.user_id,
+                seller_id: sellerId,
+                goods_id: order.goods_id,
+                goods_description: goodsDescription,
+                goods_image: goodsImages,
+                spec_name: spec && spec.name ? spec.name : null,
+                quantity: order.quantity || 1,
+                total_price: parseFloat(order.total_price || 0).toFixed(2),
+                status: order.status,
+                create_time: formatDateTime(order.create_time),
+                pay_time: order.pay_time ? formatDateTime(order.pay_time) : null,
+                ship_time: order.ship_time ? formatDateTime(order.ship_time) : null,
+                receive_time: order.receive_time ? formatDateTime(order.receive_time) : null,
+                complete_time: order.complete_time ? formatDateTime(order.complete_time) : null
+            };
+        });
+
+        // 9. 获取总数
+        const total = await Order.countDocuments(query);
+
+        res.json({
+            msg: "success",
+            data: {
+                list: result,
+                total: total,
+                page: pageNum,
+                pageSize: pageSizeNum
+            }
+        });
+    } catch (error) {
+        console.log('获取我买到的订单列表失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
+        });
+    }
+});
+
+// 我卖出的订单列表接口
+// GET /order/sold/list
+router.get('/sold/list', async (req, res) => {
+    try {
+        const { user_id, status, page = 1, pageSize = 10 } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 分页参数验证
+        const pageNum = parseInt(page) || 1;
+        const pageSizeNum = parseInt(pageSize) || 10;
+
+        if (pageNum < 1) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        if (pageSizeNum < 1 || pageSizeNum > 100) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        // 2. 获取该用户发布的所有商品ID
+        const goodsList = await Goods.find({ user_id: user_id }).lean();
+        const goodsIds = goodsList.map(g => g.goods_id);
+
+        if (goodsIds.length === 0) {
+            // 如果用户没有发布任何商品，直接返回空列表
+            return res.json({
+                msg: "success",
+                data: {
+                    list: [],
+                    total: 0,
+                    page: pageNum,
+                    pageSize: pageSizeNum
+                }
+            });
+        }
+
+        // 3. 构建查询条件（只返回 seller_id 等于 user_id 的订单，即商品属于该用户的订单）
+        const query = { goods_id: { $in: goodsIds } };
+        
+        // 如果传入了状态筛选，添加状态条件
+        if (status !== undefined && status !== null && status !== '' && status !== 'all') {
+            const validStatuses = ['paid', 'shipped', 'completed'];
+            if (validStatuses.includes(status)) {
+                query.status = status;
+            }
+        }
+
+        const skip = (pageNum - 1) * pageSizeNum;
+        const limit = pageSizeNum;
+
+        // 4. 查询订单列表（按创建时间倒序）
+        const orders = await Order.find(query)
+            .sort({ create_time: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        // 5. 获取所有商品ID和规格ID
+        const specIds = orders
+            .filter(o => o.spec_id)
+            .map(o => o.spec_id);
+
+        // 6. 批量查询商品信息（构建商品映射，包含完整的商品信息）
+        const goodsMap = {};
+        goodsList.forEach(goods => {
+            goodsMap[goods.goods_id] = goods;
+        });
+
+        // 7. 批量查询规格信息
+        const specOptions = await SpecOption.find({ 
+            spec_option_id: { $in: specIds } 
+        }).lean();
+        const specMap = {};
+        specOptions.forEach(spec => {
+            specMap[spec.spec_option_id] = spec;
+        });
+
+        // 8. 组装返回数据
+        const result = orders.map(order => {
+            const goods = goodsMap[order.goods_id];
+            const spec = order.spec_id ? specMap[order.spec_id] : null;
+            
+            // 处理商品图片（返回数组格式，必须确保是数组）
+            let goodsImages = [];
+            if (goods && goods.images) {
+                if (Array.isArray(goods.images)) {
+                    goodsImages = processImageUrls(goods.images);
+                } else if (typeof goods.images === 'string') {
+                    // 如果是字符串，尝试解析为JSON，否则作为单个图片URL
+                    try {
+                        const parsed = JSON.parse(goods.images);
+                        goodsImages = Array.isArray(parsed) ? processImageUrls(parsed) : [goods.images];
+                    } catch (e) {
+                        goodsImages = processImageUrls([goods.images]);
+                    }
+                }
+            }
+
+            // 处理商品描述（确保始终返回字符串，不能为null或undefined）
+            let goodsDescription = '';
+            if (goods) {
+                if (goods.description && typeof goods.description === 'string') {
+                    goodsDescription = goods.description;
+                } else if (goods.name && typeof goods.name === 'string') {
+                    goodsDescription = goods.name;
+                } else {
+                    goodsDescription = '商品描述';
+                }
+            } else {
+                goodsDescription = '商品描述';
+            }
+
+            return {
+                order_id: order.order_id,
+                order_no: order.order_no,
+                buyer_id: order.user_id,
+                seller_id: user_id,
+                goods_id: order.goods_id,
+                goods_description: goodsDescription,
+                goods_image: goodsImages,
+                spec_name: spec && spec.name ? spec.name : null,
+                quantity: order.quantity || 1,
+                total_price: parseFloat(order.total_price || 0).toFixed(2),
+                status: order.status,
+                create_time: formatDateTime(order.create_time),
+                pay_time: order.pay_time ? formatDateTime(order.pay_time) : null,
+                ship_time: order.ship_time ? formatDateTime(order.ship_time) : null,
+                receive_time: order.receive_time ? formatDateTime(order.receive_time) : null,
+                complete_time: order.complete_time ? formatDateTime(order.complete_time) : null
+            };
+        });
+
+        // 9. 获取总数
+        const total = await Order.countDocuments(query);
+
+        res.json({
+            msg: "success",
+            data: {
+                list: result,
+                total: total,
+                page: pageNum,
+                pageSize: pageSizeNum
+            }
+        });
+    } catch (error) {
+        console.log('获取我卖出的订单列表失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
+        });
+    }
+});
+
 // 取消订单接口
 // POST /order/cancel
 router.post('/cancel', async (req, res) => {
@@ -493,48 +855,78 @@ router.post('/cancel', async (req, res) => {
     }
 });
 
-// 确认收货接口
-// POST /order/confirm
-router.post('/confirm', async (req, res) => {
+// 商家发货接口
+// POST /order/ship
+router.post('/ship', async (req, res) => {
     try {
         const { user_id, order_id } = req.body;
 
         // 1. 参数验证
-        if (!user_id || !order_id) {
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        if (!order_id) {
             return res.status(200).json({
                 msg: "error",
                 error: "参数错误"
             });
         }
 
-        // 2. 查询订单并验证归属
-        const order = await Order.findOne({ 
-            order_id: order_id,
-            user_id: user_id
-        });
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
 
+        // 3. 查询订单
+        const order = await Order.findOne({ order_id: order_id }).lean();
         if (!order) {
             return res.status(200).json({
                 msg: "error",
-                error: "订单不存在或不属于当前用户"
+                error: "订单不存在"
             });
         }
 
-        // 3. 验证订单状态（只有 shipped 状态的订单可以确认收货）
-        if (order.status !== 'shipped') {
+        // 4. 查询商品信息，获取卖家ID
+        const goods = await Goods.findOne({ goods_id: order.goods_id }).lean();
+        if (!goods) {
             return res.status(200).json({
                 msg: "error",
-                error: "订单状态不允许确认收货"
+                error: "商品不存在"
             });
         }
 
-        // 4. 更新订单状态
+        // 5. 验证订单的 seller_id 是否等于 user_id（确保是商家本人）
+        if (goods.user_id !== user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "无权操作此订单"
+            });
+        }
+
+        // 6. 验证订单状态是否为 paid（待发货）
+        if (order.status !== 'paid') {
+            return res.status(200).json({
+                msg: "error",
+                error: "订单状态错误，无法发货"
+            });
+        }
+
+        // 7. 更新订单状态为 shipped（待收货），记录发货时间
         const currentTime = new Date().getTime();
         await Order.updateOne(
             { order_id: order_id },
             {
                 $set: {
-                    status: 'completed',
+                    status: 'shipped',
+                    ship_time: currentTime,
                     update_time: currentTime
                 }
             }
@@ -544,7 +936,93 @@ router.post('/confirm', async (req, res) => {
             msg: "success",
             data: {
                 order_id: order_id,
-                status: "completed"
+                status: "shipped",
+                ship_time: formatDateTime(currentTime)
+            }
+        });
+    } catch (error) {
+        console.log('发货失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "发货失败"
+        });
+    }
+});
+
+// 确认收货接口
+// POST /order/confirm
+router.post('/confirm', async (req, res) => {
+    try {
+        const { user_id, order_id } = req.body;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        if (!order_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 查询订单
+        const order = await Order.findOne({ order_id: order_id }).lean();
+        if (!order) {
+            return res.status(200).json({
+                msg: "error",
+                error: "订单不存在"
+            });
+        }
+
+        // 4. 验证订单的 buyer_id 是否等于 user_id（确保是买家本人）
+        if (order.user_id !== user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "无权操作此订单"
+            });
+        }
+
+        // 5. 验证订单状态是否为 shipped（待收货）
+        if (order.status !== 'shipped') {
+            return res.status(200).json({
+                msg: "error",
+                error: "订单状态错误，无法确认收货"
+            });
+        }
+
+        // 6. 更新订单状态为 review（待评价），记录收货时间
+        const currentTime = new Date().getTime();
+        await Order.updateOne(
+            { order_id: order_id },
+            {
+                $set: {
+                    status: 'review',
+                    receive_time: currentTime,
+                    update_time: currentTime
+                }
+            }
+        );
+
+        res.json({
+            msg: "success",
+            data: {
+                order_id: order_id,
+                status: "review",
+                receive_time: formatDateTime(currentTime)
             }
         });
     } catch (error) {
@@ -678,6 +1156,7 @@ router.post('/pay', async (req, res) => {
             {
                 $set: {
                     status: 'paid',
+                    pay_time: currentTime,
                     update_time: currentTime
                 }
             }
@@ -702,6 +1181,7 @@ router.post('/pay', async (req, res) => {
             msg: "success",
             data: {
                 order_id: order_id,
+                order_no: order.order_no || '', // 订单编号（用于支付成功页面显示）
                 order_status: "paid",
                 pay_amount: orderAmount,
                 balance_after: balanceAfter,
@@ -715,6 +1195,100 @@ router.post('/pay', async (req, res) => {
         res.status(500).json({
             msg: "error",
             error: "服务器错误"
+        });
+    }
+});
+
+// 获取我卖出的数量
+router.get('/sold/count', async (req, res) => {
+    try {
+        const { user_id } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 获取该用户发布的所有商品ID
+        const goodsList = await Goods.find({ user_id: user_id }).select('goods_id').lean();
+        const goodsIds = goodsList.map(g => g.goods_id);
+
+        // 4. 统计该用户作为卖家已完成的订单数量
+        // 根据文档说明，只统计状态为 completed 或 paid 的订单
+        const count = await Order.countDocuments({
+            goods_id: { $in: goodsIds },
+            status: { $in: ['completed', 'paid'] }
+        });
+
+        // 5. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                count: count
+            }
+        });
+    } catch (error) {
+        console.log('获取我卖出的数量失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
+        });
+    }
+});
+
+// 获取我买到的数量
+router.get('/bought/count', async (req, res) => {
+    try {
+        const { user_id } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 统计该用户作为买家已完成的订单数量
+        // 根据文档说明，只统计状态为 completed 或 paid 的订单
+        const count = await Order.countDocuments({
+            user_id: user_id,
+            status: { $in: ['completed', 'paid'] }
+        });
+
+        // 4. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                count: count
+            }
+        });
+    } catch (error) {
+        console.log('获取我买到的数量失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
         });
     }
 });

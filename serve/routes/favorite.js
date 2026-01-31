@@ -175,6 +175,49 @@ router.post('/toggle', async (req, res) => {
     }
 });
 
+// 获取收藏数量
+router.get('/count', async (req, res) => {
+    try {
+        const { user_id } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 统计收藏数量
+        const count = await Favorite.countDocuments({
+            user_id: user_id
+        });
+
+        // 4. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                count: count
+            }
+        });
+    } catch (error) {
+        console.log('获取收藏数量失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
+        });
+    }
+});
+
 // 获取"我的收藏"列表
 router.get('/list', async (req, res) => {
     try {

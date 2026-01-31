@@ -34,7 +34,13 @@ Page({
     payAmount: 0,            // 支付金额（数字）
     payAmountFormatted: '0.00',  // 支付金额（格式化字符串）
     walletBalance: 0,        // 钱包余额（数字）
-    walletBalanceFormatted: '0.00'  // 钱包余额（格式化字符串）
+    walletBalanceFormatted: '0.00',  // 钱包余额（格式化字符串）
+    
+    // 商家管理相关
+    isOwner: false,          // 当前用户是否是商品发布者
+    showManageModal: false,   // 是否显示管理弹窗
+    newDescription: '',       // 新的商品描述
+    newPrice: ''             // 新的商品价格
   },
 
   /**
@@ -202,12 +208,17 @@ Page({
         
         console.log('处理后的规格数据:', goods.spec_enabled, goods.specs);
         
+        // 判断当前用户是否是商品发布者
+        const currentUserId = wx.getStorageSync('user_id');
+        const isOwner = seller.user_id && seller.user_id == currentUserId;
+        
         this.setData({
           goods,
           seller,
           createTime,
           groupBuyDiscountText,
           groupBuyPrice,
+          isOwner,
           loading: false
         });
 
@@ -924,20 +935,24 @@ Page({
       wx.hideLoading();
 
       if (result?.msg === 'success') {
-        wx.showToast({
-          title: '支付成功',
-          icon: 'success'
-        });
+        // 获取订单信息
+        const orderNo = result.data?.order_no || '';
+        const payAmount = result.data?.pay_amount || this.data.payAmount;
         
         // 关闭支付弹窗
         this.onClosePayModal();
         
-        // 跳转到订单页面
+        // 跳转到支付成功页面
+        let url = `/pkg_goods/paysuccess/paysuccess?order_id=${order_id}&pay_amount=${payAmount}`;
+        if (orderNo) {
+          url += `&order_no=${encodeURIComponent(orderNo)}`;
+        }
+        
         setTimeout(() => {
           wx.redirectTo({
-            url: '/pkg_goods/order/order?status=paid'
+            url: url
           });
-        }, 1500);
+        }, 500);
       } else {
         wx.showToast({
           title: result?.error || '支付失败',
@@ -952,6 +967,155 @@ Page({
         title: error?.msg || '网络请求失败',
         icon: 'none',
         duration: 3000
+      });
+    }
+  },
+
+  /**
+   * 打开管理弹窗
+   */
+  onManageClick() {
+    this.setData({
+      showManageModal: true,
+      newDescription: this.data.goods.description || '',
+      newPrice: this.data.goods.price ? this.data.goods.price.toString() : ''
+    });
+  },
+
+  /**
+   * 关闭管理弹窗
+   */
+  onCloseManageModal() {
+    this.setData({
+      showManageModal: false,
+      newDescription: '',
+      newPrice: ''
+    });
+  },
+
+  /**
+   * 阻止事件冒泡
+   */
+  stopPropagationManage() {
+    // 阻止点击弹窗内容区域时关闭弹窗
+  },
+
+  /**
+   * 商品描述输入
+   */
+  onDescriptionInput(e) {
+    this.setData({
+      newDescription: e.detail.value
+    });
+  },
+
+  /**
+   * 价格输入
+   */
+  onPriceInputManage(e) {
+    this.setData({
+      newPrice: e.detail.value
+    });
+  },
+
+  /**
+   * 确认编辑商品
+   */
+  async onConfirmManage() {
+    const { goods, newDescription, newPrice } = this.data;
+    
+    // 验证描述
+    if (!newDescription || !newDescription.trim()) {
+      wx.showToast({
+        title: '请输入商品描述',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 验证价格
+    if (!newPrice || !newPrice.trim()) {
+      wx.showToast({
+        title: '请输入价格',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price < 0) {
+      wx.showToast({
+        title: '请输入有效的价格',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 检查是否有变化
+    const descriptionChanged = newDescription.trim() !== (goods.description || '');
+    const priceChanged = price !== parseFloat(goods.price || 0);
+    
+    if (!descriptionChanged && !priceChanged) {
+      this.onCloseManageModal();
+      return;
+    }
+
+    try {
+      const user_id = wx.getStorageSync('user_id');
+      if (!user_id) {
+        wx.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        return;
+      }
+
+      wx.showLoading({
+        title: '更新中...',
+        mask: true
+      });
+
+      // 调用更新接口
+      const updateData = {
+        goods_id: goods.goods_id,
+        user_id: user_id
+      };
+      
+      if (descriptionChanged) {
+        updateData.description = newDescription.trim();
+      }
+      
+      if (priceChanged) {
+        updateData.price = price;
+      }
+
+      const result = await ajax('/goods/update', 'POST', updateData);
+
+      wx.hideLoading();
+
+      if (result?.msg === 'success') {
+        wx.showToast({
+          title: '更新成功',
+          icon: 'success'
+        });
+        
+        // 关闭弹窗
+        this.onCloseManageModal();
+        
+        // 刷新商品详情
+        this.loadGoodsDetail();
+      } else {
+        wx.showToast({
+          title: result?.error || '更新失败',
+          icon: 'none'
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('更新商品失败:', error);
+      wx.showToast({
+        title: '网络请求失败',
+        icon: 'none'
       });
     }
   }
