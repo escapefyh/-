@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { User, Goods, Address, SpecOption, Order, Wallet, PaymentRecord } = require('../db');
+const { User, Goods, Address, SpecOption, Order, Wallet, PaymentRecord, Comment } = require('../db');
 
 // 生成订单编号（格式：ORD + 年月日 + 时间戳后9位 + 随机数3位）
 const generateOrderNo = () => {
@@ -949,7 +949,7 @@ router.post('/ship', async (req, res) => {
     }
 });
 
-// 确认收货接口
+// 确认收货接口（包含资金转账功能）
 // POST /order/confirm
 router.post('/confirm', async (req, res) => {
     try {
@@ -979,50 +979,143 @@ router.post('/confirm', async (req, res) => {
             });
         }
 
-        // 3. 查询订单
-        const order = await Order.findOne({ order_id: order_id }).lean();
+        // 3. 查询订单（使用原子操作确保状态一致性）
+        const order = await Order.findOne({ 
+            order_id: order_id,
+            user_id: user_id,  // 确保是买家本人
+            status: 'shipped'  // 确保订单状态是待收货
+        }).lean();
+
         if (!order) {
+            // 进一步判断是订单不存在、权限不足还是状态错误
+            const orderCheck = await Order.findOne({ order_id: order_id }).lean();
+            if (!orderCheck) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "订单不存在"
+                });
+            }
+            if (orderCheck.user_id !== user_id) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "无权限操作此订单"
+                });
+            }
+            if (orderCheck.status !== 'shipped') {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "订单状态不正确，无法确认收货"
+                });
+            }
             return res.status(200).json({
                 msg: "error",
-                error: "订单不存在"
+                error: "订单状态不正确，无法确认收货"
             });
         }
 
-        // 4. 验证订单的 buyer_id 是否等于 user_id（确保是买家本人）
-        if (order.user_id !== user_id) {
+        // 4. 获取商品信息，获取卖家ID
+        const goods = await Goods.findOne({ goods_id: order.goods_id }).lean();
+        if (!goods) {
             return res.status(200).json({
                 msg: "error",
-                error: "无权操作此订单"
+                error: "商品不存在"
             });
         }
 
-        // 5. 验证订单状态是否为 shipped（待收货）
-        if (order.status !== 'shipped') {
+        const seller_id = goods.user_id;
+        if (!seller_id) {
             return res.status(200).json({
                 msg: "error",
-                error: "订单状态错误，无法确认收货"
+                error: "卖家信息异常"
             });
         }
 
-        // 6. 更新订单状态为 review（待评价），记录收货时间
+        // 5. 获取订单金额
+        const orderAmount = parseFloat(order.total_price || 0);
+        if (orderAmount <= 0) {
+            return res.status(200).json({
+                msg: "error",
+                error: "订单金额异常"
+            });
+        }
+
+        // 6. 确保卖家钱包存在，如果不存在则创建
+        let sellerWallet = await Wallet.findOne({ user_id: seller_id }).lean();
+        if (!sellerWallet) {
+            const { v4: uuidv4 } = await import('uuid');
+            const walletId = uuidv4();
+            const currentTime = new Date().getTime();
+            await Wallet.create({
+                wallet_id: walletId,
+                user_id: seller_id,
+                balance: 0.00,
+                create_time: currentTime
+            });
+            sellerWallet = await Wallet.findOne({ user_id: seller_id }).lean();
+        }
+
+        // 7. 使用原子操作更新卖家钱包余额（增加订单金额）
+        const walletUpdateResult = await Wallet.findOneAndUpdate(
+            { user_id: seller_id },
+            { 
+                $inc: { balance: orderAmount },
+                $set: { update_time: new Date().getTime() }
+            },
+            { new: true }
+        ).lean();
+
+        if (!walletUpdateResult) {
+            return res.status(200).json({
+                msg: "error",
+                error: "更新卖家钱包失败"
+            });
+        }
+
+        // 8. 使用原子操作更新订单状态为 review（待评价）
+        // 只设置 receive_time，不设置 complete_time（评价后才设置）
         const currentTime = new Date().getTime();
-        await Order.updateOne(
-            { order_id: order_id },
+        const orderUpdateResult = await Order.findOneAndUpdate(
+            { 
+                order_id: order_id,
+                status: 'shipped'  // 确保状态仍然是 shipped，防止并发问题
+            },
             {
                 $set: {
-                    status: 'review',
-                    receive_time: currentTime,
+                    status: 'review',  // 确认收货后状态为 review（待评价）
+                    receive_time: currentTime,  // 确认收货时间
+                    // 不更新 complete_time，评价后才更新
                     update_time: currentTime
                 }
-            }
-        );
+            },
+            { new: true }
+        ).lean();
 
+        if (!orderUpdateResult) {
+            // 如果订单更新失败，需要回滚钱包余额（由于没有事务，这里只能记录日志）
+            // 在实际生产环境中，应该使用支持事务的数据库或分布式锁
+            console.error('订单状态更新失败，但钱包余额已增加，订单ID:', order_id);
+            // 尝试回滚钱包余额
+            await Wallet.findOneAndUpdate(
+                { user_id: seller_id },
+                { $inc: { balance: -orderAmount } }
+            );
+            return res.status(200).json({
+                msg: "error",
+                error: "订单状态更新失败，请重试"
+            });
+        }
+
+        // 9. 返回成功响应
         res.json({
             msg: "success",
             data: {
-                order_id: order_id,
-                status: "review",
-                receive_time: formatDateTime(currentTime)
+                order_id: order.order_id,
+                order_no: order.order_no,
+                status: "review",  // 返回状态为 review（待评价）
+                seller_id: seller_id,
+                total_price: parseFloat(orderAmount).toFixed(2),
+                seller_balance: parseFloat(walletUpdateResult.balance || 0).toFixed(2),
+                receive_time: formatDateTime(currentTime)  // 返回确认收货时间
             }
         });
     } catch (error) {
@@ -1286,6 +1379,162 @@ router.get('/bought/count', async (req, res) => {
         });
     } catch (error) {
         console.log('获取我买到的数量失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取失败"
+        });
+    }
+});
+
+// 检查是否可以评价接口
+// GET /order/check-comment
+router.get('/check-comment', async (req, res) => {
+    try {
+        const { user_id, goods_id } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        if (!goods_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "参数错误"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 查询该用户对该商品的待评价订单（status = 'review'）
+        const reviewOrder = await Order.findOne({
+            user_id: user_id,
+            goods_id: goods_id,
+            status: 'review'  // 查询待评价状态的订单
+        })
+        .sort({ receive_time: -1 }) // 按确认收货时间倒序，获取最新的待评价订单
+        .lean();
+
+        if (!reviewOrder) {
+            // 没有待评价的订单，不能评价
+            return res.json({
+                msg: "success",
+                data: {
+                    can_comment: false,
+                    order_id: null,
+                    receive_time: null,
+                    has_comment: false
+                }
+            });
+        }
+
+        // 4. 检查该订单是否已有评价
+        const existingComment = await Comment.findOne({ 
+            order_id: reviewOrder.order_id 
+        }).lean();
+
+        const hasComment = !!existingComment;
+
+        // 5. 如果有评价，不能再次评价
+        if (hasComment) {
+            return res.json({
+                msg: "success",
+                data: {
+                    can_comment: false,
+                    order_id: reviewOrder.order_id,
+                    receive_time: reviewOrder.receive_time ? formatDateTime(reviewOrder.receive_time) : null,
+                    has_comment: true
+                }
+            });
+        }
+
+        // 6. 没有评价，可以评价
+        res.json({
+            msg: "success",
+            data: {
+                can_comment: true,
+                order_id: reviewOrder.order_id,
+                receive_time: reviewOrder.receive_time ? formatDateTime(reviewOrder.receive_time) : null,
+                has_comment: false
+            }
+        });
+    } catch (error) {
+        console.log('检查是否可以评价失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "检查失败"
+        });
+    }
+});
+
+// 待处理事项统计接口
+// GET /order/pending-count
+router.get('/pending-count', async (req, res) => {
+    try {
+        const { user_id } = req.query;
+
+        // 1. 参数验证
+        if (!user_id) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户未登录"
+            });
+        }
+
+        // 2. 验证用户是否存在
+        const user = await User.findOne({ user_id: user_id }).lean();
+        if (!user) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用户不存在"
+            });
+        }
+
+        // 3. 获取该用户发布的所有商品ID（用于查询卖家订单）
+        const goodsList = await Goods.find({ user_id: user_id }).select('goods_id').lean();
+        const goodsIds = goodsList.map(g => g.goods_id);
+
+        // 4. 统计待发货数量（卖家：状态为 paid 的订单）
+        const pendingShipCount = goodsIds.length > 0 
+            ? await Order.countDocuments({
+                goods_id: { $in: goodsIds },
+                status: 'paid'
+            })
+            : 0;
+
+        // 5. 统计待收货数量（买家：状态为 shipped 的订单）
+        const pendingReceiveCount = await Order.countDocuments({
+            user_id: user_id,
+            status: 'shipped'
+        });
+
+        // 6. 统计待评价数量（买家：状态为 review 的订单）
+        const pendingReviewCount = await Order.countDocuments({
+            user_id: user_id,
+            status: 'review'
+        });
+
+        // 7. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                pending_ship_count: pendingShipCount,
+                pending_receive_count: pendingReceiveCount,
+                pending_review_count: pendingReviewCount
+            }
+        });
+    } catch (error) {
+        console.log('获取待处理事项统计失败:', error);
         res.status(200).json({
             msg: "error",
             error: "获取失败"

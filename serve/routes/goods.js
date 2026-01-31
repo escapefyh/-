@@ -465,19 +465,16 @@ router.get('/getCommentCount', async (req, res) => {
             });
         }
 
-        // 3. 统计已审核通过的评论数（包括回复）
+        // 3. 统计评论数（所有评论，不区分审核状态）
         const count = await Comment.countDocuments({
-            goods_id: goods_id,
-            status: 'approved'
+            goods_id: goods_id
         });
 
         // 4. 返回成功响应
         res.json({
             msg: "success",
             data: {
-                goods_id: goods_id,
-                count: count,
-                message: "获取成功"
+                count: count
             }
         });
     } catch (error) {

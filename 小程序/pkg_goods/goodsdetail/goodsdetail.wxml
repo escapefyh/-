@@ -5,18 +5,7 @@
   </view>
 
   <view wx:else class="content">
-    <!-- 卖家信息（顶部） -->
-    <view class="seller-header">
-      <image 
-        class="seller-avatar" 
-        src="{{seller.avatar || '/assets/default_avatar.png'}}" 
-        mode="aspectFill"
-        binderror="onAvatarError"
-      />
-      <text class="seller-name-header">{{seller.nickname || seller.name || '未设置昵称'}}</text>
-    </view>
-
-    <!-- 商品图片轮播 -->
+    <!-- 商品图片轮播（最顶部） -->
     <view class="image-section">
       <t-swiper
         wx:if="{{goods.images && goods.images.length > 0}}"
@@ -26,7 +15,7 @@
       />
     </view>
 
-    <!-- 商品信息 -->
+    <!-- 商品信息：价格、标题、描述 -->
     <view class="goods-info">
       <view class="price-section">
         <text class="price">¥{{goods.price}}</text>
@@ -46,6 +35,85 @@
           <text class="label">销量：</text>
           <text class="value sales-value">已售{{goods.sales_count}}件</text>
         </view>
+      </view>
+    </view>
+
+    <!-- 卖家信息 -->
+    <view class="seller-section">
+      <view class="seller-header">
+        <image 
+          class="seller-avatar" 
+          src="{{seller.avatar || '/assets/default_avatar.png'}}" 
+          mode="aspectFill"
+          binderror="onAvatarError"
+        />
+        <text class="seller-name">{{seller.nickname || seller.name || '未设置昵称'}}</text>
+      </view>
+    </view>
+
+    <!-- 评论区 -->
+    <view class="comment-section">
+      <view class="comment-header">
+        <text class="comment-title">商品评价（{{commentCount}}）</text>
+        <view wx:if="{{canComment}}" class="comment-tip" bind:tap="onShowCommentModal">
+          <text class="comment-tip-text">💬 去评价</text>
+        </view>
+      </view>
+
+      <!-- 评价提醒（已完成交易但未评价） -->
+      <view wx:if="{{showCommentReminder}}" class="comment-reminder">
+        <text class="reminder-text">您已完成该商品的交易，快来评价一下吧~</text>
+        <view class="reminder-btn" bind:tap="onShowCommentModal">
+          <text>立即评价</text>
+        </view>
+      </view>
+
+      <!-- 评论列表 -->
+      <view wx:if="{{commentList.length > 0}}" class="comment-list">
+        <view 
+          wx:for="{{commentList}}" 
+          wx:key="comment_id" 
+          class="comment-item"
+        >
+          <view class="comment-user-info">
+            <image 
+              class="comment-avatar" 
+              src="{{item.user_avatar || '/assets/default_avatar.png'}}" 
+              mode="aspectFill"
+            />
+            <view class="comment-user-detail">
+              <text class="comment-user-name">{{item.user_nickname || '匿名用户'}}</text>
+              <text class="comment-time">{{item.create_time_formatted}}</text>
+            </view>
+            <view class="comment-rating">
+              <text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="star {{item.rating >= index ? 'star-filled' : 'star-empty'}}">★</text>
+            </view>
+          </view>
+          <view class="comment-content">{{item.content}}</view>
+          <view wx:if="{{item.images && item.images.length > 0}}" class="comment-images">
+            <image 
+              wx:for="{{item.images}}" 
+              wx:key="index"
+              wx:for-item="img"
+              class="comment-image" 
+              src="{{img}}" 
+              mode="aspectFill"
+              bind:tap="onPreviewCommentImage"
+              data-url="{{img}}"
+              data-urls="{{item.images}}"
+            />
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:else class="comment-empty">
+        <text>暂无评价，快来成为第一个评价的人吧~</text>
+      </view>
+
+      <!-- 加载更多 -->
+      <view wx:if="{{commentHasMore && commentList.length > 0}}" class="comment-load-more" bind:tap="loadMoreComments">
+        <text>加载更多</text>
       </view>
     </view>
 
@@ -286,6 +354,94 @@
       <view class="manage-modal-footer">
         <view class="manage-btn-cancel" bind:tap="onCloseManageModal">取消</view>
         <view class="manage-btn-confirm" bind:tap="onConfirmManage">确认</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 评论弹窗 -->
+  <view wx:if="{{showCommentModal}}" class="comment-modal-mask" bind:tap="onCloseCommentModal">
+    <view class="comment-modal-content" catch:tap="stopPropagation">
+      <!-- 弹窗头部 -->
+      <view class="comment-modal-header">
+        <text class="comment-modal-title">商品评价</text>
+        <view class="comment-modal-close" bind:tap="onCloseCommentModal">×</view>
+      </view>
+
+      <!-- 弹窗内容 -->
+      <view class="comment-modal-body">
+        <!-- 评价星级 -->
+        <view class="comment-rating-section">
+          <text class="comment-rating-label">评分：</text>
+          <view class="comment-rating-stars">
+            <view 
+              wx:for="{{[1,2,3,4,5]}}" 
+              wx:key="*this"
+              class="comment-star {{commentRating >= item ? 'comment-star-filled' : 'comment-star-empty'}}"
+              data-rating="{{item}}"
+              bind:tap="onSelectRating"
+            >
+              ★
+            </view>
+          </view>
+        </view>
+
+        <!-- 评价内容 -->
+        <view class="comment-content-section">
+          <textarea 
+            class="comment-textarea" 
+            placeholder="请输入评价内容（必填）"
+            value="{{commentContent}}"
+            bindinput="onCommentContentInput"
+            maxlength="500"
+            auto-height
+          />
+        </view>
+
+        <!-- 评价图片 -->
+        <view class="comment-images-section">
+          <view class="comment-images-label">上传图片（最多3张，可选）</view>
+          <view class="comment-images-list">
+            <view 
+              wx:for="{{commentImages}}" 
+              wx:key="index"
+              class="comment-image-item"
+            >
+              <image 
+                class="comment-image-preview" 
+                src="{{item}}" 
+                mode="aspectFill"
+                bind:tap="onPreviewCommentImage"
+                data-url="{{item}}"
+                data-urls="{{commentImages}}"
+              />
+              <view 
+                class="comment-image-delete" 
+                bind:tap="onDeleteCommentImage"
+                data-index="{{index}}"
+              >
+                ×
+              </view>
+            </view>
+            <view 
+              wx:if="{{commentImages.length < 3}}"
+              class="comment-image-upload" 
+              bind:tap="onSelectCommentImages"
+            >
+              <text class="upload-icon">+</text>
+              <text class="upload-text">添加图片</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 弹窗底部 -->
+      <view class="comment-modal-footer">
+        <view 
+          class="comment-submit-btn {{submittingComment ? 'comment-submit-btn-disabled' : ''}}" 
+          bind:tap="onSubmitComment"
+        >
+          <text class="comment-submit-btn-text">{{submittingComment ? '提交中...' : '提交评价'}}</text>
+        </view>
       </view>
     </view>
   </view>

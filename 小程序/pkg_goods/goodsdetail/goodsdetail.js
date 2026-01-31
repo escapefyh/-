@@ -40,7 +40,24 @@ Page({
     isOwner: false,          // 当前用户是否是商品发布者
     showManageModal: false,   // 是否显示管理弹窗
     newDescription: '',       // 新的商品描述
-    newPrice: ''             // 新的商品价格
+    newPrice: '',             // 新的商品价格
+    
+    // 评论相关
+    commentList: [],          // 评论列表
+    commentPage: 1,           // 评论页码
+    commentPageSize: 10,      // 评论每页数量
+    commentHasMore: true,    // 是否还有更多评论
+    commentLoading: false,    // 评论加载中
+    canComment: false,       // 是否可以评价（已完成交易且未评价）
+    showCommentReminder: false, // 是否显示评价提醒
+    completedOrderId: null,   // 已完成的订单ID（用于评价）
+    
+    // 评论弹窗相关
+    showCommentModal: false, // 是否显示评论弹窗
+    commentRating: 5,        // 评价星级（1-5）
+    commentContent: '',       // 评价内容
+    commentImages: [],        // 评价图片
+    submittingComment: false  // 提交评论中
   },
 
   /**
@@ -230,6 +247,12 @@ Page({
         // 加载评论数、收藏数和收藏状态
         this.loadCommentCount();
         this.loadFavoriteCount();
+        
+        // 加载评论列表
+        this.loadCommentList();
+        
+        // 检查是否可以评价（已完成交易但未评价）
+        this.checkCanComment();
       } else {
         console.error('API返回错误:', result);
         wx.showToast({
@@ -407,10 +430,11 @@ Page({
    * 点击评论
    */
   onCommentClick() {
-    // TODO: 跳转到评论页面或展开评论列表
-    wx.showToast({
-      title: '评论功能开发中',
-      icon: 'none'
+    // 滚动到评论区
+    // 由于小程序不支持直接滚动到指定元素，这里使用页面滚动
+    wx.pageScrollTo({
+      selector: '.comment-section',
+      duration: 300
     });
   },
 
@@ -1117,6 +1141,361 @@ Page({
         title: '网络请求失败',
         icon: 'none'
       });
+    }
+  },
+
+  /**
+   * 加载评论列表
+   */
+  async loadCommentList(isLoadMore = false) {
+    if (this.data.commentLoading) return;
+    
+    const page = isLoadMore ? this.data.commentPage : 1;
+    
+    this.setData({ commentLoading: true });
+    
+    try {
+      const result = await ajax(
+        `/comment/list?goods_id=${this.data.goods_id}&page=${page}&pageSize=${this.data.commentPageSize}`,
+        'GET',
+        {}
+      );
+      
+      if (result?.msg === 'success') {
+        const list = result.data?.list || [];
+        const total = result.data?.total || 0;
+        
+        // 格式化评论时间
+        const processedList = list.map(comment => {
+          if (comment.create_time) {
+            comment.create_time_formatted = this.formatCommentTime(comment.create_time);
+          }
+          return comment;
+        });
+        
+        const currentList = isLoadMore ? this.data.commentList : [];
+        const newList = [...currentList, ...processedList];
+        
+        this.setData({
+          commentList: newList,
+          commentPage: page + 1,
+          commentHasMore: newList.length < total,
+          commentLoading: false
+        });
+      } else {
+        this.setData({ commentLoading: false });
+      }
+    } catch (error) {
+      console.error('加载评论列表失败:', error);
+      this.setData({ commentLoading: false });
+    }
+  },
+
+  /**
+   * 加载更多评论
+   */
+  loadMoreComments() {
+    if (!this.data.commentHasMore || this.data.commentLoading) return;
+    this.loadCommentList(true);
+  },
+
+  /**
+   * 格式化评论时间
+   */
+  formatCommentTime(timeStr) {
+    if (!timeStr) return '';
+    
+    try {
+      const date = new Date(timeStr);
+      const now = new Date();
+      const diff = now - date;
+      
+      // 小于1分钟
+      if (diff < 60000) {
+        return '刚刚';
+      }
+      
+      // 小于1小时
+      if (diff < 3600000) {
+        return Math.floor(diff / 60000) + '分钟前';
+      }
+      
+      // 小于24小时
+      if (diff < 86400000) {
+        return Math.floor(diff / 3600000) + '小时前';
+      }
+      
+      // 小于7天
+      if (diff < 604800000) {
+        return Math.floor(diff / 86400000) + '天前';
+      }
+      
+      // 超过7天，显示具体日期
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      if (year === now.getFullYear()) {
+        return `${month}-${day}`;
+      }
+      
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      return timeStr;
+    }
+  },
+
+  /**
+   * 检查是否可以评价（待评价状态的订单）
+   */
+  async checkCanComment() {
+    const user_id = wx.getStorageSync('user_id');
+    if (!user_id) return;
+    
+    try {
+      // 查询该用户对该商品的待评价订单（状态为review）
+      const result = await ajax(
+        `/order/check-comment?user_id=${user_id}&goods_id=${this.data.goods_id}`,
+        'GET',
+        {}
+      );
+      
+      if (result?.msg === 'success') {
+        const data = result.data || {};
+        const canComment = data.can_comment || false;
+        const orderId = data.order_id || null;
+        const receiveTime = data.receive_time || null; // 确认收货时间
+        const hasComment = data.has_comment || false;
+        
+        // 如果待评价且未评价，显示评价提醒
+        if (canComment && !hasComment) {
+          // 检查是否超过7天（从确认收货时间开始计算）
+          if (receiveTime) {
+            const receiveDate = new Date(receiveTime);
+            const now = new Date();
+            const diffDays = Math.floor((now - receiveDate) / (1000 * 60 * 60 * 24));
+            
+            // 如果超过7天，自动好评
+            if (diffDays > 7) {
+              await this.autoGoodComment(orderId);
+              return;
+            }
+          }
+          
+          this.setData({
+            canComment: true,
+            showCommentReminder: true,
+            completedOrderId: orderId
+          });
+        }
+      }
+    } catch (error) {
+      console.error('检查是否可以评价失败:', error);
+    }
+  },
+
+  /**
+   * 自动好评（超过7天未评价）
+   * 从确认收货时间（receive_time）开始计算，超过7天自动好评
+   */
+  async autoGoodComment(orderId) {
+    if (!orderId) return;
+    
+    try {
+      const user_id = wx.getStorageSync('user_id');
+      const result = await ajax('/comment/create', 'POST', {
+        user_id: user_id,
+        goods_id: this.data.goods_id,
+        order_id: orderId,
+        rating: 5,
+        content: '系统默认好评',
+        is_auto: true
+      });
+      
+      if (result?.msg === 'success') {
+        // 刷新评论列表和评论数
+        this.loadCommentList();
+        this.loadCommentCount();
+        
+        // 隐藏评价提醒
+        this.setData({
+          canComment: false,
+          showCommentReminder: false
+        });
+      }
+    } catch (error) {
+      console.error('自动好评失败:', error);
+    }
+  },
+
+  /**
+   * 显示评论弹窗
+   */
+  onShowCommentModal() {
+    if (!this.data.canComment) {
+      wx.showToast({
+        title: '您暂无待评价的订单',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    this.setData({
+      showCommentModal: true,
+      commentRating: 5,
+      commentContent: '',
+      commentImages: []
+    });
+  },
+
+  /**
+   * 关闭评论弹窗
+   */
+  onCloseCommentModal() {
+    this.setData({
+      showCommentModal: false,
+      commentRating: 5,
+      commentContent: '',
+      commentImages: []
+    });
+  },
+
+  /**
+   * 选择评价星级
+   */
+  onSelectRating(e) {
+    const rating = e.currentTarget.dataset.rating;
+    this.setData({ commentRating: rating });
+  },
+
+  /**
+   * 输入评价内容
+   */
+  onCommentContentInput(e) {
+    this.setData({ commentContent: e.detail.value });
+  },
+
+  /**
+   * 选择评价图片
+   */
+  async onSelectCommentImages() {
+    try {
+      const res = await wx.chooseMedia({
+        count: 3,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera']
+      });
+      
+      if (res.tempFiles && res.tempFiles.length > 0) {
+        const images = res.tempFiles.map(file => file.tempFilePath);
+        this.setData({ commentImages: images });
+      }
+    } catch (error) {
+      console.error('选择图片失败:', error);
+    }
+  },
+
+  /**
+   * 删除评价图片
+   */
+  onDeleteCommentImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = [...this.data.commentImages];
+    images.splice(index, 1);
+    this.setData({ commentImages: images });
+  },
+
+  /**
+   * 预览评价图片
+   */
+  onPreviewCommentImage(e) {
+    const url = e.currentTarget.dataset.url;
+    const urls = e.currentTarget.dataset.urls || [];
+    wx.previewImage({
+      current: url,
+      urls: urls.length > 0 ? urls : [url]
+    });
+  },
+
+  /**
+   * 提交评论
+   */
+  async onSubmitComment() {
+    if (this.data.submittingComment) return;
+    
+    const { commentRating, commentContent, completedOrderId } = this.data;
+    
+    if (!commentContent || commentContent.trim() === '') {
+      wx.showToast({
+        title: '请输入评价内容',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    this.setData({ submittingComment: true });
+    
+    try {
+      wx.showLoading({ title: '提交中...', mask: true });
+      
+      const user_id = wx.getStorageSync('user_id');
+      
+      // 上传图片（如果有）
+      let imageUrls = [];
+      if (this.data.commentImages.length > 0) {
+        // 这里需要调用图片上传接口
+        // 暂时使用临时路径，实际应该上传到服务器
+        imageUrls = this.data.commentImages;
+      }
+      
+      const result = await ajax('/comment/create', 'POST', {
+        user_id: user_id,
+        goods_id: this.data.goods_id,
+        order_id: completedOrderId,
+        rating: commentRating,
+        content: commentContent.trim(),
+        images: imageUrls
+      });
+      
+      wx.hideLoading();
+      
+      if (result?.msg === 'success') {
+        wx.showToast({
+          title: '评价成功',
+          icon: 'success'
+        });
+        
+        // 关闭弹窗
+        this.onCloseCommentModal();
+        
+        // 刷新评论列表和评论数
+        this.loadCommentList();
+        this.loadCommentCount();
+        
+        // 隐藏评价提醒
+        this.setData({
+          canComment: false,
+          showCommentReminder: false
+        });
+        
+        // 提示：评价完成后，订单状态已更新为已完成
+      } else {
+        wx.showToast({
+          title: result?.error || '评价失败',
+          icon: 'none',
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('提交评论失败:', error);
+      wx.showToast({
+        title: '网络请求失败',
+        icon: 'none',
+        duration: 3000
+      });
+    } finally {
+      this.setData({ submittingComment: false });
     }
   }
 })

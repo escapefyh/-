@@ -214,15 +214,38 @@ const CommentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // 订单ID（唯一，一个订单只能评价一次）
+    order_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
     // 评论用户ID
     user_id: {
         type: String,
         required: true
     },
+    // 评价星级（1-5）
+    rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
+    },
     // 评论内容
     content: {
         type: String,
         required: true
+    },
+    // 评价图片（JSON数组，最多3张）
+    images: {
+        type: String,
+        default: '[]'
+    },
+    // 是否自动好评
+    is_auto: {
+        type: Boolean,
+        default: false
     },
     // 父评论ID（回复时使用）
     parent_id: {
@@ -239,8 +262,19 @@ const CommentSchema = new mongoose.Schema({
     create_time: {
         type: Number,
         required: true
+    },
+    // 更新时间
+    update_time: {
+        type: Number,
+        default: null
     }
 });
+
+// 添加索引
+CommentSchema.index({ goods_id: 1 }); // 便于查询商品的评论
+CommentSchema.index({ order_id: 1 }, { unique: true }); // 订单ID唯一索引，防止重复评价
+CommentSchema.index({ user_id: 1 }); // 便于查询用户的评论
+CommentSchema.index({ create_time: -1 }); // 便于按时间排序
 
 const Comment = mongoose.model("Comment", CommentSchema);
 

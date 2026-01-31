@@ -20,6 +20,46 @@
     </view>
   </view>
 
+  <!-- 待处理事项提醒 -->
+  <view wx:if="{{pendingCount > 0}}" class="section-card pending-section">
+    <view class="pending-header">
+      <text class="pending-title">待处理事项</text>
+      <text class="pending-count">{{pendingCount}}个待处理</text>
+    </view>
+    <view class="pending-list">
+      <!-- 卖家：待发货 -->
+      <view wx:if="{{pendingShipCount > 0}}" class="pending-item" bind:tap="goToPendingShip">
+        <view class="pending-icon">📦</view>
+        <view class="pending-content">
+          <text class="pending-label">待发货</text>
+          <text class="pending-desc">有{{pendingShipCount}}个订单待发货</text>
+        </view>
+        <view class="pending-badge">{{pendingShipCount}}</view>
+        <view class="pending-arrow">></view>
+      </view>
+      <!-- 买家：待收货 -->
+      <view wx:if="{{pendingReceiveCount > 0}}" class="pending-item" bind:tap="goToPendingReceive">
+        <view class="pending-icon">🚚</view>
+        <view class="pending-content">
+          <text class="pending-label">待收货</text>
+          <text class="pending-desc">有{{pendingReceiveCount}}个订单待确认收货</text>
+        </view>
+        <view class="pending-badge">{{pendingReceiveCount}}</view>
+        <view class="pending-arrow">></view>
+      </view>
+      <!-- 买家：待评价 -->
+      <view wx:if="{{pendingReviewCount > 0}}" class="pending-item" bind:tap="goToPendingReview">
+        <view class="pending-icon">⭐</view>
+        <view class="pending-content">
+          <text class="pending-label">待评价</text>
+          <text class="pending-desc">有{{pendingReviewCount}}个订单待评价</text>
+        </view>
+        <view class="pending-badge">{{pendingReviewCount}}</view>
+        <view class="pending-arrow">></view>
+      </view>
+    </view>
+  </view>
+
   <!-- 我的钱包 -->
   <view class="section-card">
     <view class="menu-item" bind:tap="goToWallet">

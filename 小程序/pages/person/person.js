@@ -15,7 +15,12 @@ Page({
     browseCount: 0,       // 历史浏览数量
     publishedCount: 0,   // 我发布的数量
     soldCount: 0,        // 我卖出的数量
-    boughtCount: 0       // 我买到的数量
+    boughtCount: 0,      // 我买到的数量
+    // 待处理事项
+    pendingCount: 0,      // 待处理总数
+    pendingShipCount: 0,  // 待发货数量（卖家）
+    pendingReceiveCount: 0, // 待收货数量（买家）
+    pendingReviewCount: 0   // 待评价数量（买家）
   },
 
   getuserinfo() {
@@ -166,6 +171,8 @@ Page({
         });
         // 加载统计数据
         this.loadStatistics(user_id);
+        // 加载待处理事项
+        this.loadPendingItems(user_id);
       } else {
         // 没有nickname，显示"微信授权"
         this.setData({
@@ -238,6 +245,60 @@ Page({
       console.error('加载统计数据失败:', error);
       // 静默失败，不影响页面显示
     }
+  },
+
+  /**
+   * 加载待处理事项
+   */
+  async loadPendingItems(user_id) {
+    try {
+      const result = await ajax(`/order/pending-count?user_id=${user_id}`, 'GET', {});
+      
+      if (result?.msg === 'success') {
+        const data = result.data || {};
+        const pendingShipCount = data.pending_ship_count || 0;      // 待发货数量（卖家）
+        const pendingReceiveCount = data.pending_receive_count || 0; // 待收货数量（买家）
+        const pendingReviewCount = data.pending_review_count || 0;    // 待评价数量（买家）
+        const pendingCount = pendingShipCount + pendingReceiveCount + pendingReviewCount;
+        
+        this.setData({
+          pendingCount,
+          pendingShipCount,
+          pendingReceiveCount,
+          pendingReviewCount
+        });
+      }
+    } catch (error) {
+      console.error('加载待处理事项失败:', error);
+      // 静默失败，不影响页面显示
+    }
+  },
+
+  /**
+   * 跳转到待发货订单（卖家）
+   */
+  goToPendingShip() {
+    wx.navigateTo({
+      url: '/pkg_goods/order/order?type=sold&status=paid'
+    });
+  },
+
+  /**
+   * 跳转到待收货订单（买家）
+   */
+  goToPendingReceive() {
+    wx.navigateTo({
+      url: '/pkg_goods/order/order?type=bought&status=shipped'
+    });
+  },
+
+  /**
+   * 跳转到待评价订单（买家）
+   */
+  goToPendingReview() {
+    wx.navigateTo({
+      url: '/pkg_goods/order/order?type=bought&status=review'
+    });
   },
 
   /**

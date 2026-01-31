@@ -39,6 +39,7 @@ const appRoutes = require('./routes/app');
 const walletRoutes = require('./routes/wallet');
 const followRoutes = require('./routes/follow');
 const browseRoutes = require('./routes/browse');
+const commentRoutes = require('./routes/comment');
 
 // 注册路由
 app.use('/', registerRoutes);         // /register
@@ -61,6 +62,7 @@ app.use('/app', appRoutes);           // /app/about, /app/privacy
 app.use('/wallet', walletRoutes);     // /wallet/balance, /wallet/recharge
 app.use('/follow', followRoutes);     // /follow/count
 app.use('/browse', browseRoutes);     // /browse/count
+app.use('/comment', commentRoutes);   // /comment/list, /comment/create
 
 // 启动服务
 app.listen(3000,() => {

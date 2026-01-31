@@ -483,6 +483,7 @@ Page({
 
   /**
    * 执行确认收货（买家操作）
+   * 确认收货后，订单金额将转入卖家账户，订单状态更新为待评价（review）
    */
   async confirmReceive(order_id) {
     try {
@@ -492,6 +493,10 @@ Page({
       });
       
       const user_id = wx.getStorageSync('user_id');
+      
+      // 调用确认收货接口，后端会自动处理：
+      // 1. 将订单金额转入卖家账户
+      // 2. 更新订单状态为待评价（review）
       const result = await ajax('/order/confirm', 'POST', {
         user_id: user_id,
         order_id: order_id
@@ -502,10 +507,14 @@ Page({
       if (result?.msg === 'success') {
         wx.showToast({
           title: '确认收货成功',
-          icon: 'success'
+          icon: 'success',
+          duration: 2000
         });
+        
         // 刷新订单列表
-        this.loadOrderList(true);
+        setTimeout(() => {
+          this.loadOrderList(true);
+        }, 500);
       } else {
         wx.showToast({
           title: result?.error || '确认收货失败',
