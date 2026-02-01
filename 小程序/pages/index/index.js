@@ -384,19 +384,70 @@ Page({
     if (this.data.loading) return;
     
     if (isRefresh) {
-      this.setData({ page: 1, hasMore: true });
+      // 刷新时重置分页
+      this.setData({ 
+        page: 1, 
+        hasMore: true
+      });
     }
 
     if (!this.data.hasMore && !isRefresh) return;
 
+    // 如果是关注标签，需要检查登录状态
+    if (this.data.currentTab === 'follow') {
+      const user_id = wx.getStorageSync('user_id');
+      if (!user_id) {
+        wx.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        setTimeout(() => {
+          wx.navigateTo({
+            url: '/pkg_user/login/login'
+          });
+        }, 1500);
+        this.setData({ 
+          goodsList: [],
+          loading: false 
+        });
+        return;
+      }
+    }
+
     this.setData({ loading: true });
 
     try {
-      const result = await ajax(
-        `/goods/list?page=${this.data.page}&pageSize=${this.data.pageSize}`,
-        'GET',
-        {}
-      );
+      // 刷新时使用 page = 1，否则使用当前页码
+      const currentPage = isRefresh ? 1 : this.data.page;
+      let requestUrl = '';
+      
+      // 如果是新发标签，调用专门的接口获取最近7天的商品
+      if (this.data.currentTab === 'new') {
+        requestUrl = `/goods/new?page=${currentPage}&pageSize=${this.data.pageSize}`;
+        console.log('刷新新发页面，调用接口:', requestUrl);
+      }
+      // 如果是关注标签，添加follower_id参数
+      else if (this.data.currentTab === 'follow') {
+        const user_id = wx.getStorageSync('user_id');
+        if (user_id) {
+          requestUrl = `/goods/list?page=${currentPage}&pageSize=${this.data.pageSize}&follower_id=${user_id}`;
+          console.log('刷新关注页面，调用接口:', requestUrl);
+        } else {
+          // 未登录时不应该到这里（已在前面检查），但为了安全还是处理一下
+          this.setData({ 
+            goodsList: [],
+            loading: false 
+          });
+          return;
+        }
+      }
+      // 其他标签（推荐），使用默认接口
+      else {
+        requestUrl = `/goods/list?page=${currentPage}&pageSize=${this.data.pageSize}`;
+        console.log('刷新推荐页面，调用接口:', requestUrl);
+      }
+
+      const result = await ajax(requestUrl, 'GET', {});
 
       console.log('API返回结果:', result);
 
@@ -407,7 +458,7 @@ Page({
         console.log('获取到的商品列表:', list);
         console.log('商品总数:', total);
 
-        // 处理每个商品，添加拼团折扣文本
+        // 处理每个商品，添加拼团折扣文本和new标记
         const processedList = list.map(item => {
           if (item.group_buy_enabled && item.group_buy_discount) {
             item.groupBuyDiscountText = (item.group_buy_discount * 10).toFixed(0);
@@ -420,19 +471,37 @@ Page({
           if (!item.seller || typeof item.seller !== 'object') {
             item.seller = {};
           }
+          
+          // 如果是新发标签，判断是否为最近3天发布的商品
+          if (this.data.currentTab === 'new' && item.create_time) {
+            const createTime = new Date(item.create_time);
+            const now = new Date();
+            const diffTime = now - createTime;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            // 最近3天（0-3天）标记为new
+            item.isNew = diffDays <= 3;
+          } else {
+            item.isNew = false;
+          }
+          
           return item;
         });
 
         const currentList = isRefresh ? [] : this.data.goodsList;
         const newList = [...currentList, ...processedList];
         
+        // 刷新时，下一页应该是第2页；否则是当前页+1
+        const nextPage = isRefresh ? 2 : (this.data.page + 1);
+        
         this.setData({
           goodsList: newList,
           total,
-          page: this.data.page + 1,
+          page: nextPage,
           hasMore: newList.length < total,
           loading: false
         });
+        
+        console.log('刷新完成，当前标签页:', this.data.currentTab, '商品数量:', newList.length);
       } else {
         console.error('API返回错误:', result);
         wx.showToast({
@@ -559,14 +628,41 @@ Page({
    * 页面相关事件处理函数--监听用户下拉动作
    */
   onPullDownRefresh() {
+    console.log('下拉刷新触发，当前标签页:', this.data.currentTab);
+    
     if (this.data.isSearching && this.data.searchKeyword) {
       // 搜索状态下，刷新搜索结果
       this.searchGoods(this.data.searchKeyword, true).then(() => {
         wx.stopPullDownRefresh();
       });
     } else {
-      // 普通状态下，刷新商品列表
+      // 普通状态下，刷新时自动跳转到推荐标签页
+      // 如果当前已经是推荐标签页，则直接刷新
+      if (this.data.currentTab !== 'recommend') {
+        console.log('刷新时自动切换到推荐标签页');
+        // 切换到推荐标签页
+        this.setData({
+          currentTab: 'recommend',
+          page: 1,
+          hasMore: true,
+          goodsList: [] // 清空列表，确保刷新时显示新数据
+        });
+      } else {
+        // 当前已经是推荐标签页，重置分页参数
+        this.setData({
+          page: 1,
+          hasMore: true,
+          goodsList: [] // 清空列表，确保刷新时显示新数据
+        });
+      }
+      
+      // 刷新推荐页面的数据
+      // 传入 isRefresh = true，确保使用正确的分页参数
       this.loadGoodsList(true).then(() => {
+        console.log('刷新完成，当前标签页:', this.data.currentTab);
+        wx.stopPullDownRefresh();
+      }).catch((error) => {
+        console.error('刷新失败:', error);
         wx.stopPullDownRefresh();
       });
     }

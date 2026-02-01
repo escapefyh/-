@@ -105,7 +105,10 @@
 
     <!-- 空状态 -->
     <view wx:elif="{{!loading && goodsList.length === 0}}" class="empty-container">
-      <text>{{isSearching ? '无搜索结果' : '暂无商品'}}</text>
+      <text wx:if="{{isSearching}}">无搜索结果</text>
+      <text wx:elif="{{currentTab === 'follow'}}">暂无关注用户发布的商品</text>
+      <text wx:elif="{{currentTab === 'new'}}">最近7天暂无新发布的商品</text>
+      <text wx:else>暂无商品</text>
     </view>
 
     <!-- 商品网格 -->
@@ -136,6 +139,9 @@
           />
           <view wx:if="{{item.group_buy_enabled}}" class="group-buy-badge">
             <text>拼团</text>
+          </view>
+          <view wx:if="{{item.isNew}}" class="new-badge">
+            <text>NEW</text>
           </view>
         </view>
 

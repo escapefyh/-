@@ -174,8 +174,10 @@ Page({
             order.create_time_formatted = this.formatTime(order.create_time);
           }
           
-          // 格式化订单状态显示文本
+          // 格式化订单状态显示文本（拼团订单会在后面特殊处理）
+          // 先设置默认状态文本，拼团订单会在后面覆盖
           order.status_text = this.getStatusText(order.status);
+          order.can_ship = false; // 默认不能发货
           
           // 处理商品信息
           // 支持多种字段名：goods_image/goods_img/image/images
@@ -240,6 +242,41 @@ Page({
             order.total_price_formatted = parseFloat(totalPrice).toFixed(2);
           } else {
             order.total_price_formatted = '0.00';
+          }
+          
+          // 处理拼团信息
+          if (order.is_group_buy) {
+            // 拼团状态：pending-拼团中，success-成团成功，failed-拼团失败
+            order.group_buy_status = order.group_buy_status || 'pending';
+            // 拼团所需人数
+            order.group_buy_required_count = order.group_buy_required_count || order.group_buy_count || 2;
+            // 当前拼团人数
+            order.group_buy_current_count = order.group_buy_current_count || 0;
+            // 还差几人
+            order.group_buy_remaining_count = Math.max(0, order.group_buy_required_count - order.group_buy_current_count);
+            
+            // 拼团订单状态显示逻辑
+            if (order.status === 'paid') {
+              if (order.group_buy_status === 'success') {
+                // 拼团成功，显示"待发货"
+                order.status_text = '待发货（等待卖家处理）';
+                order.can_ship = true; // 可以发货
+              } else if (order.group_buy_status === 'pending') {
+                // 拼团中，显示"拼单中"
+                order.status_text = '拼单中';
+                order.can_ship = false; // 不能发货
+              } else if (order.group_buy_status === 'failed') {
+                // 拼团失败
+                order.status_text = '拼团失败';
+                order.can_ship = false; // 不能发货
+              }
+            }
+            // 非paid状态，使用默认状态文本（已在前面设置）
+          } else {
+            // 非拼团订单，如果状态是paid，可以发货
+            if (order.status === 'paid') {
+              order.can_ship = true;
+            }
           }
           
           return order;
@@ -559,6 +596,18 @@ Page({
         icon: 'none'
       });
       return;
+    }
+    
+    // 拼团订单特殊验证：只有成团后才能发货
+    if (order.is_group_buy) {
+      if (order.group_buy_status !== 'success') {
+        wx.showToast({
+          title: '拼团未成团，无法发货',
+          icon: 'none',
+          duration: 3000
+        });
+        return;
+      }
     }
     
     wx.showModal({

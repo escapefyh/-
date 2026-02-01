@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { User, Goods, Address, SpecOption, Order, Wallet, PaymentRecord, Comment } = require('../db');
+const { User, Goods, Address, SpecOption, Order, Wallet, PaymentRecord, Comment, GroupBuy } = require('../db');
 
 // 生成订单编号（格式：ORD + 年月日 + 时间戳后9位 + 随机数3位）
 const generateOrderNo = () => {
@@ -36,7 +36,7 @@ const formatDateTime = (timestamp) => {
 // POST /order/create
 router.post('/create', async (req, res) => {
     try {
-        const { user_id, goods_id, address_id, quantity, spec_id, is_group_buy, total_price } = req.body;
+        const { user_id, goods_id, address_id, quantity, spec_id, spec_name, is_group_buy, total_price, group_id } = req.body;
 
         // 1. 参数验证
         if (!user_id) {
@@ -224,7 +224,116 @@ router.post('/create', async (req, res) => {
 
         const currentTime = new Date().getTime();
 
-        // 11. 创建订单记录
+        // 11. 处理拼团逻辑
+        let finalGroupId = null;
+        let groupBuyStatus = null;
+        let groupBuyCurrentCount = 0;
+        let groupBuyRequiredCount = 0;
+        let groupBuyRemainingCount = 0;
+
+        if (isGroupBuy) {
+            // 验证商品是否开启拼团功能
+            if (!goods.group_buy_enabled) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "商品未开启拼团功能"
+                });
+            }
+
+            const requiredCount = goods.group_buy_count || 2; // 默认2人拼团
+            groupBuyRequiredCount = requiredCount;
+
+            if (group_id) {
+                // 如果提供了 group_id，检查该拼团组是否存在且未过期
+                const existingGroup = await GroupBuy.findOne({ 
+                    group_id: group_id,
+                    goods_id: goods_id,
+                    status: 'pending'
+                }).lean();
+
+                if (!existingGroup) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: "拼团组不存在或已过期"
+                    });
+                }
+
+                // 检查是否已过期
+                if (existingGroup.expire_time <= currentTime) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: "拼团组已过期"
+                    });
+                }
+
+                // 检查是否已满员
+                if (existingGroup.current_count >= existingGroup.required_count) {
+                    return res.status(200).json({
+                        msg: "error",
+                        error: "拼团组已满员"
+                    });
+                }
+
+                finalGroupId = group_id;
+            } else {
+                // 如果没有提供 group_id，检查是否有正在进行的拼团（未过期且未满员）
+                const activeGroup = await GroupBuy.findOne({
+                    goods_id: goods_id,
+                    status: 'pending',
+                    expire_time: { $gt: currentTime },
+                    current_count: { $lt: requiredCount } // 未满员
+                }).sort({ create_time: -1 }) // 获取最新的拼团组
+                .lean();
+
+                if (activeGroup) {
+                    // 加入已有拼团组
+                    finalGroupId = activeGroup.group_id;
+                    // 查询该拼团组下已支付的订单数量，判断是否满员
+                    const paidOrderCount = await Order.countDocuments({
+                        group_id: activeGroup.group_id,
+                        status: 'paid'
+                    });
+                    if (paidOrderCount >= activeGroup.required_count) {
+                        return res.status(200).json({
+                            msg: "error",
+                            error: "拼团组已满员"
+                        });
+                    }
+                } else {
+                    // 创建新的拼团组
+                    const { v4: uuidv4 } = await import('uuid');
+                    finalGroupId = uuidv4();
+                    const expireTime = currentTime + 24 * 60 * 60 * 1000; // 24小时后过期
+
+                    await GroupBuy.create({
+                        group_id: finalGroupId,
+                        goods_id: goods_id,
+                        required_count: requiredCount,
+                        current_count: 0, // 初始为0，只有支付后才计入
+                        status: 'pending',
+                        create_time: currentTime,
+                        expire_time: expireTime
+                    });
+                }
+            }
+
+            // 查询拼团组当前信息（用于返回）
+            const groupInfo = await GroupBuy.findOne({ group_id: finalGroupId }).lean();
+            if (groupInfo) {
+                // 查询该拼团组下已支付的订单数量
+                const paidOrderCount = await Order.countDocuments({
+                    group_id: finalGroupId,
+                    status: 'paid'
+                });
+                groupBuyCurrentCount = paidOrderCount;
+                groupBuyRequiredCount = groupInfo.required_count;
+                groupBuyRemainingCount = Math.max(0, groupBuyRequiredCount - groupBuyCurrentCount);
+            }
+
+            groupBuyStatus = 'pending'; // 创建订单时，状态始终为 pending，只有支付后才可能成团
+        }
+
+        // 12. 创建订单记录
         await Order.create({
             order_id: orderId,
             order_no: orderNo,
@@ -234,12 +343,13 @@ router.post('/create', async (req, res) => {
             quantity: quantityNum,
             spec_id: goods.spec_enabled ? spec_id : null,
             is_group_buy: isGroupBuy,
+            group_id: finalGroupId,
             total_price: calculatedTotalPrice,
-            status: 'pending',
+            status: 'pending', // 创建订单时，状态始终为 pending，需要支付
             create_time: currentTime
         });
 
-        // 12. 更新商品销量（使用原子操作确保数据一致性）
+        // 13. 更新商品销量（使用原子操作确保数据一致性）
         await Goods.findOneAndUpdate(
             { goods_id: goods_id },
             { 
@@ -247,16 +357,27 @@ router.post('/create', async (req, res) => {
             }
         );
 
-        // 13. 返回成功响应
+        // 14. 返回成功响应
+        const responseData = {
+            order_id: orderId,
+            order_no: orderNo,
+            status: 'pending', // 创建订单时，状态始终为 pending
+            total_price: calculatedTotalPrice,
+            create_time: formatISO8601(currentTime)
+        };
+
+        // 如果是拼团订单，添加拼团相关信息
+        if (isGroupBuy) {
+            responseData.group_buy_status = groupBuyStatus;
+            responseData.group_id = finalGroupId;
+            responseData.group_buy_current_count = groupBuyCurrentCount;
+            responseData.group_buy_required_count = groupBuyRequiredCount;
+            responseData.group_buy_remaining_count = groupBuyRemainingCount;
+        }
+
         res.json({
             msg: "success",
-            data: {
-                order_id: orderId,
-                order_no: orderNo,
-                status: "pending",
-                total_price: calculatedTotalPrice,
-                create_time: formatISO8601(currentTime)
-            }
+            data: responseData
         });
     } catch (error) {
         console.log('创建订单失败:', error);
@@ -486,11 +607,14 @@ router.get('/bought/list', async (req, res) => {
             .limit(limit)
             .lean();
 
-        // 4. 获取所有商品ID和规格ID
+        // 4. 获取所有商品ID、规格ID和拼团组ID
         const goodsIds = [...new Set(orders.map(o => o.goods_id))];
         const specIds = orders
             .filter(o => o.spec_id)
             .map(o => o.spec_id);
+        const groupIds = orders
+            .filter(o => o.is_group_buy && o.group_id)
+            .map(o => o.group_id);
 
         // 5. 批量查询商品信息
         const goodsList = await Goods.find({ goods_id: { $in: goodsIds } }).lean();
@@ -519,10 +643,46 @@ router.get('/bought/list', async (req, res) => {
             specMap[spec.spec_option_id] = spec;
         });
 
-        // 8. 组装返回数据
+        // 8. 批量查询拼团组信息
+        const groupBuys = await GroupBuy.find({ 
+            group_id: { $in: [...new Set(groupIds)] } 
+        }).lean();
+        const groupBuyMap = {};
+        groupBuys.forEach(group => {
+            groupBuyMap[group.group_id] = group;
+        });
+
+        // 9. 批量查询所有拼团组的已支付订单数量（优化性能，避免在循环中查询）
+        const uniqueGroupIds = [...new Set(groupIds)];
+        const paidOrderCountMap = {};
+        if (uniqueGroupIds.length > 0) {
+            // 使用聚合查询批量统计每个拼团组的已支付订单数
+            const paidOrderCounts = await Order.aggregate([
+                {
+                    $match: {
+                        group_id: { $in: uniqueGroupIds },
+                        status: 'paid',
+                        is_group_buy: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$group_id',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            paidOrderCounts.forEach(item => {
+                paidOrderCountMap[item._id] = item.count;
+            });
+        }
+
+        // 10. 组装返回数据
         const result = orders.map(order => {
             const goods = goodsMap[order.goods_id];
             const spec = order.spec_id ? specMap[order.spec_id] : null;
+            const groupBuy = order.is_group_buy && order.group_id ? groupBuyMap[order.group_id] : null;
             
             // 处理商品图片（返回数组格式，必须确保是数组）
             let goodsImages = [];
@@ -557,7 +717,7 @@ router.get('/bought/list', async (req, res) => {
                 goodsDescription = '商品描述';
             }
 
-            return {
+            const orderData = {
                 order_id: order.order_id,
                 order_no: order.order_no,
                 buyer_id: order.user_id,
@@ -575,6 +735,23 @@ router.get('/bought/list', async (req, res) => {
                 receive_time: order.receive_time ? formatDateTime(order.receive_time) : null,
                 complete_time: order.complete_time ? formatDateTime(order.complete_time) : null
             };
+
+            // 如果是拼团订单，添加拼团相关信息
+            if (order.is_group_buy && groupBuy) {
+                // 从映射表中获取已支付的订单数量（重要：只统计已支付的订单）
+                const paidOrderCount = paidOrderCountMap[order.group_id] || 0;
+
+                orderData.is_group_buy = true;
+                orderData.group_id = order.group_id;
+                orderData.group_buy_status = groupBuy.status;
+                orderData.group_buy_required_count = groupBuy.required_count;
+                orderData.group_buy_current_count = paidOrderCount; // 使用已支付的订单数
+                orderData.group_buy_remaining_count = Math.max(0, groupBuy.required_count - paidOrderCount);
+            } else {
+                orderData.is_group_buy = false;
+            }
+
+            return orderData;
         });
 
         // 9. 获取总数
@@ -677,10 +854,13 @@ router.get('/sold/list', async (req, res) => {
             .limit(limit)
             .lean();
 
-        // 5. 获取所有商品ID和规格ID
+        // 5. 获取所有规格ID和拼团组ID
         const specIds = orders
             .filter(o => o.spec_id)
             .map(o => o.spec_id);
+        const groupIds = orders
+            .filter(o => o.is_group_buy && o.group_id)
+            .map(o => o.group_id);
 
         // 6. 批量查询商品信息（构建商品映射，包含完整的商品信息）
         const goodsMap = {};
@@ -697,10 +877,46 @@ router.get('/sold/list', async (req, res) => {
             specMap[spec.spec_option_id] = spec;
         });
 
-        // 8. 组装返回数据
+        // 8. 批量查询拼团组信息
+        const groupBuys = await GroupBuy.find({ 
+            group_id: { $in: [...new Set(groupIds)] } 
+        }).lean();
+        const groupBuyMap = {};
+        groupBuys.forEach(group => {
+            groupBuyMap[group.group_id] = group;
+        });
+
+        // 9. 批量查询所有拼团组的已支付订单数量（优化性能，避免在循环中查询）
+        const uniqueGroupIds = [...new Set(groupIds)];
+        const paidOrderCountMap = {};
+        if (uniqueGroupIds.length > 0) {
+            // 使用聚合查询批量统计每个拼团组的已支付订单数
+            const paidOrderCounts = await Order.aggregate([
+                {
+                    $match: {
+                        group_id: { $in: uniqueGroupIds },
+                        status: 'paid',
+                        is_group_buy: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$group_id',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            paidOrderCounts.forEach(item => {
+                paidOrderCountMap[item._id] = item.count;
+            });
+        }
+
+        // 10. 组装返回数据
         const result = orders.map(order => {
             const goods = goodsMap[order.goods_id];
             const spec = order.spec_id ? specMap[order.spec_id] : null;
+            const groupBuy = order.is_group_buy && order.group_id ? groupBuyMap[order.group_id] : null;
             
             // 处理商品图片（返回数组格式，必须确保是数组）
             let goodsImages = [];
@@ -732,7 +948,7 @@ router.get('/sold/list', async (req, res) => {
                 goodsDescription = '商品描述';
             }
 
-            return {
+            const orderData = {
                 order_id: order.order_id,
                 order_no: order.order_no,
                 buyer_id: order.user_id,
@@ -750,9 +966,26 @@ router.get('/sold/list', async (req, res) => {
                 receive_time: order.receive_time ? formatDateTime(order.receive_time) : null,
                 complete_time: order.complete_time ? formatDateTime(order.complete_time) : null
             };
+
+            // 如果是拼团订单，添加拼团相关信息
+            if (order.is_group_buy && groupBuy) {
+                // 从映射表中获取已支付的订单数量（重要：只统计已支付的订单）
+                const paidOrderCount = paidOrderCountMap[order.group_id] || 0;
+
+                orderData.is_group_buy = true;
+                orderData.group_id = order.group_id;
+                orderData.group_buy_status = groupBuy.status;
+                orderData.group_buy_required_count = groupBuy.required_count;
+                orderData.group_buy_current_count = paidOrderCount; // 使用已支付的订单数
+                orderData.group_buy_remaining_count = Math.max(0, groupBuy.required_count - paidOrderCount);
+            } else {
+                orderData.is_group_buy = false;
+            }
+
+            return orderData;
         });
 
-        // 9. 获取总数
+        // 11. 获取总数
         const total = await Order.countDocuments(query);
 
         res.json({
@@ -789,7 +1022,7 @@ router.post('/cancel', async (req, res) => {
 
         // 2. 查询订单并验证归属
         const order = await Order.findOne({ 
-            order_id: order_id,
+                order_id: order_id,
             user_id: user_id
         });
 
@@ -915,11 +1148,32 @@ router.post('/ship', async (req, res) => {
         if (order.status !== 'paid') {
             return res.status(200).json({
                 msg: "error",
-                error: "订单状态错误，无法发货"
+                error: "订单状态不正确，无法发货"
             });
         }
 
-        // 7. 更新订单状态为 shipped（待收货），记录发货时间
+        // 7. 拼团订单特殊验证（重要）
+        if (order.is_group_buy && order.group_id) {
+            // 查询拼团组信息
+            const groupBuy = await GroupBuy.findOne({ group_id: order.group_id }).lean();
+            
+            if (!groupBuy) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "拼团组不存在，无法发货"
+                });
+            }
+
+            // 验证拼团组状态：只有成团成功的订单才能发货
+            if (groupBuy.status !== 'success') {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "拼团未成团，无法发货"
+                });
+            }
+        }
+
+        // 8. 更新订单状态为 shipped（待收货），记录发货时间
         const currentTime = new Date().getTime();
         await Order.updateOne(
             { order_id: order_id },
@@ -1135,14 +1389,14 @@ router.post('/pay', async (req, res) => {
 
         // 1. 参数验证
         if (!user_id) {
-            return res.status(401).json({
+            return res.status(200).json({
                 msg: "error",
                 error: "未登录"
             });
         }
 
         if (!order_id) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
                 error: "参数错误"
             });
@@ -1152,7 +1406,7 @@ router.post('/pay', async (req, res) => {
         const user = await User.findOne({ user_id: user_id }).lean();
         
         if (!user) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
                 error: "用户不存在"
             });
@@ -1162,7 +1416,7 @@ router.post('/pay', async (req, res) => {
         const order = await Order.findOne({ order_id: order_id }).lean();
 
         if (!order) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
                 error: "订单不存在"
             });
@@ -1170,21 +1424,69 @@ router.post('/pay', async (req, res) => {
 
         // 4. 验证订单归属（订单不属于当前用户）
         if (order.user_id !== user_id) {
-            return res.status(403).json({
+            return res.status(200).json({
                 msg: "error",
-                error: "权限不足"
+                error: "无权限支付此订单"
             });
         }
 
         // 5. 验证订单状态（只有 pending 状态的订单可以支付）
         if (order.status !== 'pending') {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
-                error: "订单状态错误"
+                error: "订单状态不正确，无法支付"
             });
         }
 
-        // 6. 获取或创建钱包
+        // 6. 拼团订单特殊验证
+        let groupBuy = null;
+        let groupBuyStatus = null;
+        const currentTime = new Date().getTime();
+        
+        if (order.is_group_buy && order.group_id) {
+            // 查询拼团组信息
+            groupBuy = await GroupBuy.findOne({ group_id: order.group_id }).lean();
+            
+            if (!groupBuy) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "拼团组不存在，无法支付"
+                });
+            }
+
+            // 验证拼团组状态
+            if (groupBuy.status === 'failed') {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "拼团已失败，无法支付"
+                });
+            }
+
+            // 验证拼团组是否过期
+            if (groupBuy.expire_time <= currentTime) {
+                return res.status(200).json({
+                    msg: "error",
+                    error: "拼团已过期，无法支付"
+                });
+            }
+
+            // 验证拼团组是否已满员（查询已支付的订单数量）
+            const paidOrderCount = await Order.countDocuments({
+                group_id: order.group_id,
+                status: 'paid'
+            });
+            
+            // 如果已满员，仍然可以支付（因为可能有人取消了订单）
+            // 但需要检查是否真的满员
+            if (paidOrderCount >= groupBuy.required_count && groupBuy.status !== 'success') {
+                // 如果已满员但状态不是 success，说明可能有人取消了订单，允许支付
+                // 这里不做限制，允许支付
+            }
+
+            groupBuyStatus = groupBuy.status;
+        }
+
+        // 7. 获取或创建钱包
         let wallet = await Wallet.findOne({ user_id: user_id }).lean();
         
         if (!wallet) {
@@ -1206,19 +1508,18 @@ router.post('/pay', async (req, res) => {
         const balanceBefore = parseFloat(wallet.balance.toFixed(2));
         const orderAmount = parseFloat(order.total_price.toFixed(2));
 
-        // 7. 检查余额是否充足
+        // 8. 检查余额是否充足
         if (balanceBefore < orderAmount) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
-                error: "余额不足"
+                error: "余额不足，请先充值"
             });
         }
 
-        // 8. 计算支付后余额
+        // 9. 计算支付后余额
         const balanceAfter = parseFloat((balanceBefore - orderAmount).toFixed(2));
-        const currentTime = new Date().getTime();
 
-        // 9. 使用原子操作更新钱包余额（防止并发问题）
+        // 10. 使用原子操作更新钱包余额（防止并发问题）
         // 注意：MongoDB 单机模式不支持事务，使用原子操作确保数据一致性
         const walletUpdateResult = await Wallet.findOneAndUpdate(
             { 
@@ -1237,13 +1538,13 @@ router.post('/pay', async (req, res) => {
         );
 
         if (!walletUpdateResult) {
-            return res.status(400).json({
+            return res.status(200).json({
                 msg: "error",
-                error: "余额不足"
+                error: "余额不足，请先充值"
             });
         }
 
-        // 10. 更新订单状态
+        // 11. 更新订单状态
         await Order.updateOne(
             { order_id: order_id },
             {
@@ -1255,7 +1556,47 @@ router.post('/pay', async (req, res) => {
             }
         );
 
-        // 11. 创建支付记录
+        // 12. 拼团订单支付后的处理
+        if (order.is_group_buy && order.group_id && groupBuy) {
+            // 查询该拼团组下已支付的订单数量（包括刚刚支付的订单）
+            const paidOrderCount = await Order.countDocuments({
+                group_id: order.group_id,
+                status: 'paid'
+            });
+
+            // 更新拼团组的 current_count（基于已支付的订单数量）
+            const groupUpdateResult = await GroupBuy.findOneAndUpdate(
+                { group_id: order.group_id },
+                { 
+                    $set: { current_count: paidOrderCount }
+                },
+                { new: true }
+            ).lean();
+
+            if (groupUpdateResult) {
+                const newCurrentCount = groupUpdateResult.current_count;
+                const requiredCount = groupUpdateResult.required_count;
+
+                // 检查是否成团
+                if (newCurrentCount >= requiredCount) {
+                    // 成团成功：更新拼团组状态为 success
+                    await GroupBuy.findOneAndUpdate(
+                        { group_id: order.group_id },
+                        {
+                            status: 'success',
+                            success_time: currentTime
+                        }
+                    );
+
+                    // 所有已支付的订单状态已经是 paid，无需再次更新
+                    groupBuyStatus = 'success';
+                } else {
+                    groupBuyStatus = 'pending';
+                }
+            }
+        }
+
+        // 13. 创建支付记录
         const { v4: uuidv4 } = await import('uuid');
         await PaymentRecord.create({
             record_id: uuidv4(),
@@ -1269,25 +1610,32 @@ router.post('/pay', async (req, res) => {
             status: 'success'
         });
 
-        // 12. 返回成功响应
+        // 14. 返回成功响应
+        const responseData = {
+            order_id: order_id,
+            order_no: order.order_no || '', // 订单编号（用于支付成功页面显示）
+            order_status: "paid",
+            pay_amount: orderAmount,
+            balance_after: balanceAfter,
+            pay_time: formatISO8601(currentTime)
+        };
+
+        // 如果是拼团订单，添加拼团状态信息
+        if (order.is_group_buy && groupBuyStatus !== null) {
+            responseData.group_buy_status = groupBuyStatus;
+        }
+
         res.json({
             msg: "success",
-            data: {
-                order_id: order_id,
-                order_no: order.order_no || '', // 订单编号（用于支付成功页面显示）
-                order_status: "paid",
-                pay_amount: orderAmount,
-                balance_after: balanceAfter,
-                pay_time: formatISO8601(currentTime)
-            }
+            data: responseData
         });
     } catch (error) {
         console.log('支付订单失败:', error);
         console.log('错误详情:', error.message);
         console.log('错误堆栈:', error.stack);
-        res.status(500).json({
+        res.status(200).json({
             msg: "error",
-            error: "服务器错误"
+            error: "服务器异常"
         });
     }
 });

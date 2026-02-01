@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods, Comment, Favorite, SpecOption } = require('../db');
+const { User, Goods, Comment, Favorite, SpecOption, Follow } = require('../db');
 
 // 处理图片URL，确保返回完整的OSS URL
 // 修改 routes/goods.js 中的 processImageUrls 函数
@@ -207,7 +207,7 @@ router.get('/detail', async (req, res) => {
 // 获取商品列表（包含卖家信息，支持分类筛选和搜索）
 router.get('/list', async (req, res) => {
     try {
-        const { page = 1, pageSize = 20, category_id, keyword, seller_id } = req.query;
+        const { page = 1, pageSize = 20, category_id, keyword, seller_id, follower_id, sort, order } = req.query;
 
         // 1. 参数验证
         const pageNum = parseInt(page) || 1;
@@ -227,7 +227,29 @@ router.get('/list', async (req, res) => {
             });
         }
 
-        // 2. 构建查询条件
+        // 2. 如果传入了 follower_id，先查询关注关系
+        let followedUserIds = null;
+        if (follower_id !== undefined && follower_id !== null && follower_id !== '') {
+            // 查询该用户关注的所有用户ID
+            const followRecords = await Follow.find({ follower_id: follower_id })
+                .select('following_id')
+                .lean();
+            
+            followedUserIds = followRecords.map(f => f.following_id);
+            
+            // 如果用户未关注任何人，直接返回空列表
+            if (followedUserIds.length === 0) {
+                return res.json({
+                    msg: "success",
+                    data: {
+                        list: [],
+                        total: 0
+                    }
+                });
+            }
+        }
+
+        // 3. 构建查询条件
         const query = {};
         
         // 如果传入了分类ID，添加分类筛选条件
@@ -262,21 +284,46 @@ router.get('/list', async (req, res) => {
             query.user_id = seller_id;
         }
 
+        // 如果传入了 follower_id，添加关注筛选条件（只显示关注用户发布的商品）
+        if (followedUserIds !== null) {
+            query.user_id = { $in: followedUserIds };
+        }
+
         const skip = (pageNum - 1) * pageSizeNum;
         const limit = pageSizeNum;
 
-        // 3. 查询商品列表（按创建时间倒序）
+        // 4. 构建排序条件
+        let sortOption = { create_time: -1 }; // 默认按创建时间倒序
+        
+        if (sort && order) {
+            const sortField = sort;
+            const sortOrder = order.toLowerCase() === 'asc' ? 1 : -1;
+            
+            // 验证排序字段是否有效（防止注入）
+            const allowedSortFields = ['create_time', 'price', 'sales_count'];
+            if (allowedSortFields.includes(sortField)) {
+                sortOption = { [sortField]: sortOrder };
+            }
+        } else if (sort) {
+            // 只提供了 sort，默认使用 desc
+            const allowedSortFields = ['create_time', 'price', 'sales_count'];
+            if (allowedSortFields.includes(sort)) {
+                sortOption = { [sort]: -1 };
+            }
+        }
+
+        // 5. 查询商品列表
         const goodsList = await Goods.find(query)
-            .sort({ create_time: -1 }) // 按创建时间倒序（最新在前）
+            .sort(sortOption)
             .skip(skip)
             .limit(limit)
             .lean();
 
-        // 4. 获取所有商品ID和卖家ID
+        // 6. 获取所有商品ID和卖家ID
         const goodsIds = goodsList.map(g => g.goods_id);
         const userIds = [...new Set(goodsList.map(g => g.user_id))];
 
-        // 5. 批量查询卖家信息（使用 lean() 提高性能）
+        // 7. 批量查询卖家信息（使用 lean() 提高性能）
         const sellers = await User.find({ user_id: { $in: userIds } }).lean();
         const sellerMap = {};
         sellers.forEach(seller => {
@@ -288,7 +335,7 @@ router.get('/list', async (req, res) => {
             };
         });
 
-        // 6. 批量查询规格选项（仅查询开启规格的商品）
+        // 8. 批量查询规格选项（仅查询开启规格的商品）
         const specEnabledGoodsIds = goodsList
             .filter(g => g.spec_enabled)
             .map(g => g.goods_id);
@@ -311,7 +358,7 @@ router.get('/list', async (req, res) => {
             });
         });
 
-        // 7. 组装返回数据
+        // 9. 组装返回数据
         const result = goodsList.map(goods => {
             // 处理图片URL，确保返回完整的OSS URL
             const processedImages = processImageUrls(goods.images);
@@ -327,9 +374,9 @@ router.get('/list', async (req, res) => {
                 group_buy_count: goods.group_buy_count || null,
                 group_buy_discount: goods.group_buy_discount || null,
                 spec_enabled: goods.spec_enabled || false,
-                specs: goods.spec_enabled ? (specsMap[goods.goods_id] || null) : null,
+                specs: goods.spec_enabled ? (specsMap[goods.goods_id] || []) : [],
                 sales_count: goods.sales_count || 0,
-                create_time: formatDateTime(goods.create_time),
+                create_time: goods.create_time ? new Date(goods.create_time).toISOString() : null,
                 seller: sellerMap[goods.user_id] || {
                     user_id: goods.user_id,
                     nickname: '',
@@ -339,14 +386,16 @@ router.get('/list', async (req, res) => {
             };
         });
 
-        // 8. 获取总数（使用相同的查询条件）
+        // 10. 获取总数（使用相同的查询条件）
         const total = await Goods.countDocuments(query);
 
         res.json({
             msg: "success",
             data: {
                 list: result,
-                total: total
+                total: total,
+                page: pageNum,
+                pageSize: pageSizeNum
             }
         });
     } catch (error) {
@@ -586,6 +635,112 @@ const formatISO8601 = (timestamp) => {
     if (!timestamp) return '';
     return new Date(timestamp).toISOString();
 };
+
+// 获取最近7天发布的商品列表（新发页面）
+router.get('/new', async (req, res) => {
+    try {
+        const { page = 1, pageSize = 20 } = req.query;
+
+        // 1. 参数验证
+        const pageNum = parseInt(page) || 1;
+        const pageSizeNum = parseInt(pageSize) || 20;
+
+        if (pageNum < 1) {
+            return res.status(200).json({
+                msg: "error",
+                error: "页码必须大于0"
+            });
+        }
+
+        if (pageSizeNum < 1 || pageSizeNum > 100) {
+            return res.status(200).json({
+                msg: "error",
+                error: "每页数量必须在1-100之间"
+            });
+        }
+
+        // 2. 计算时间范围（最近7天）
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+        // 3. 构建查询条件（只查询最近7天发布的商品）
+        const query = {
+            create_time: { $gte: sevenDaysAgo.getTime() }
+        };
+
+        const skip = (pageNum - 1) * pageSizeNum;
+        const limit = pageSizeNum;
+
+        // 4. 查询商品列表（按创建时间倒序）
+        const goodsList = await Goods.find(query)
+            .sort({ create_time: -1 }) // 按创建时间倒序（最新的在前）
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        // 5. 获取所有卖家ID
+        const userIds = [...new Set(goodsList.map(g => g.user_id))];
+
+        // 6. 批量查询卖家信息
+        const sellers = await User.find({ user_id: { $in: userIds } }).lean();
+        const sellerMap = {};
+        sellers.forEach(seller => {
+            sellerMap[seller.user_id] = {
+                user_id: seller.user_id,
+                nickname: seller.nickname || '',
+                avatar: processAvatarUrl(seller.avatar || '')
+            };
+        });
+
+        // 7. 组装返回数据
+        const result = goodsList.map(goods => {
+            // 处理图片URL，确保返回完整的OSS URL
+            const processedImages = processImageUrls(goods.images);
+            
+            // 计算是否为最近3天发布的商品（is_new）
+            const createTime = goods.create_time ? new Date(goods.create_time) : null;
+            const isNew = createTime && createTime.getTime() >= threeDaysAgo.getTime();
+
+            return {
+                goods_id: goods.goods_id,
+                user_id: goods.user_id, // 添加 user_id 字段，保持与 /goods/list 一致
+                description: goods.description || '',
+                price: goods.price || 0,
+                images: processedImages,
+                create_time: createTime ? createTime.toISOString() : null,
+                is_new: isNew, // 是否为最近3天发布的商品
+                seller: sellerMap[goods.user_id] || {
+                    user_id: goods.user_id,
+                    nickname: '',
+                    avatar: '/assets/default_avatar.png'
+                },
+                group_buy_enabled: goods.group_buy_enabled || false,
+                group_buy_discount: goods.group_buy_discount || null,
+                category_id: goods.category_id || null
+            };
+        });
+
+        // 8. 获取总数（使用相同的查询条件）
+        const total = await Goods.countDocuments(query);
+
+        res.json({
+            msg: "success",
+            data: {
+                list: result,
+                total: total,
+                page: pageNum,
+                pageSize: pageSizeNum
+            }
+        });
+    } catch (error) {
+        console.log('获取新发商品列表失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "服务器异常"
+        });
+    }
+});
 
 // 更新商品接口（商家管理功能）
 // POST /goods/update

@@ -15,6 +15,10 @@ Page({
     groupBuyDiscountText: '',
     groupBuyPrice: 0,        // 拼团价格
     currentGroupCount: 0,    // 当前正在拼团的人数
+    groupBuyInfo: null,      // 拼团信息：包含正在拼团的订单信息
+    groupBuyRequiredCount: 0, // 拼团所需人数
+    groupBuyCurrentCount: 0,  // 当前拼团人数
+    groupBuyRemainingCount: 0, // 还差几人
     commentCount: 0,         // 评论数目
     favoriteCount: 0,        // 收藏数目
     isFavorited: false,      // 当前用户是否已收藏
@@ -94,10 +98,25 @@ Page({
   },
 
   /**
+   * 生命周期函数--监听页面卸载
+   */
+  onUnload() {
+    // 清除拼团倒计时定时器
+    if (this.groupBuyTimer) {
+      clearInterval(this.groupBuyTimer);
+      this.groupBuyTimer = null;
+    }
+  },
+
+  /**
    * 生命周期函数--监听页面显示
    * 当从其他页面返回时，如果卖家是当前用户，刷新头像
    */
   onShow() {
+    // 如果开启了拼团，刷新拼团信息
+    if (this.data.goods.group_buy_enabled) {
+      this.loadGroupBuyInfo();
+    }
     // 如果已经加载过商品详情，且卖家是当前用户，从本地存储刷新头像
     if (this.data.seller && this.data.seller.user_id) {
       const currentUserId = wx.getStorageSync('user_id');
@@ -253,9 +272,9 @@ Page({
           loading: false
         });
 
-        // 如果开启了拼团，加载当前拼团人数
+        // 如果开启了拼团，加载拼团信息
         if (goods.group_buy_enabled) {
-          this.loadGroupBuyCount();
+          this.loadGroupBuyInfo();
         }
 
         // 加载评论数、收藏数和收藏状态
@@ -335,22 +354,120 @@ Page({
   },
 
   /**
-   * 加载当前拼团人数
+   * 加载拼团信息
    */
-  async loadGroupBuyCount() {
+  async loadGroupBuyInfo() {
     try {
-      const result = await ajax(`/groupBuy/getCurrentCount?goods_id=${this.data.goods_id}`, 'GET', {});
+      const result = await ajax(`/groupBuy/info?goods_id=${this.data.goods_id}`, 'GET', {});
       
       if (result?.msg === 'success') {
-        const count = result.data?.count || 0;
+        const groupBuyInfo = result.data || null;
+        const requiredCount = this.data.goods.group_buy_count || 2;
+        const currentCount = groupBuyInfo ? (groupBuyInfo.current_count || 0) : 0;
+        const remainingCount = Math.max(0, requiredCount - currentCount);
+        
+        // 处理倒计时
+        let expireTimeText = '';
+        if (groupBuyInfo && groupBuyInfo.expire_time) {
+          expireTimeText = this.formatExpireTime(groupBuyInfo.expire_time);
+          // 启动倒计时定时器
+          this.startGroupBuyTimer(groupBuyInfo.expire_time);
+        }
+        
         this.setData({
-          currentGroupCount: count
+          groupBuyInfo: {
+            ...groupBuyInfo,
+            expire_time_text: expireTimeText
+          },
+          groupBuyRequiredCount: requiredCount,
+          groupBuyCurrentCount: currentCount,
+          groupBuyRemainingCount: remainingCount,
+          currentGroupCount: currentCount
+        });
+      } else {
+        // 如果没有拼团信息，设置为空
+        const requiredCount = this.data.goods.group_buy_count || 2;
+        this.setData({
+          groupBuyInfo: null,
+          groupBuyRequiredCount: requiredCount,
+          groupBuyCurrentCount: 0,
+          groupBuyRemainingCount: requiredCount,
+          currentGroupCount: 0
         });
       }
     } catch (error) {
-      console.error('获取拼团人数失败:', error);
+      console.error('获取拼团信息失败:', error);
       // 失败不影响页面显示，静默处理
+      const requiredCount = this.data.goods.group_buy_count || 2;
+      this.setData({
+        groupBuyInfo: null,
+        groupBuyRequiredCount: requiredCount,
+        groupBuyCurrentCount: 0,
+        groupBuyRemainingCount: requiredCount,
+        currentGroupCount: 0
+      });
     }
+  },
+
+  /**
+   * 格式化过期时间（倒计时）
+   */
+  formatExpireTime(expireTime) {
+    if (!expireTime) return '';
+    
+    const now = new Date();
+    const expire = new Date(expireTime);
+    const diff = expire - now;
+    
+    if (diff <= 0) {
+      return '已过期';
+    }
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    if (hours > 0) {
+      return `${hours}小时${minutes}分钟`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟${seconds}秒`;
+    } else {
+      return `${seconds}秒`;
+    }
+  },
+
+  /**
+   * 启动拼团倒计时定时器
+   */
+  startGroupBuyTimer(expireTime) {
+    // 清除之前的定时器
+    if (this.groupBuyTimer) {
+      clearInterval(this.groupBuyTimer);
+    }
+    
+    // 每秒更新一次倒计时
+    this.groupBuyTimer = setInterval(() => {
+      if (!this.data.groupBuyInfo || !this.data.groupBuyInfo.expire_time) {
+        clearInterval(this.groupBuyTimer);
+        return;
+      }
+      
+      const expireTimeText = this.formatExpireTime(this.data.groupBuyInfo.expire_time);
+      
+      // 检查是否已过期
+      const now = new Date();
+      const expire = new Date(this.data.groupBuyInfo.expire_time);
+      if (expire <= now) {
+        clearInterval(this.groupBuyTimer);
+        // 刷新拼团信息
+        this.loadGroupBuyInfo();
+        return;
+      }
+      
+      this.setData({
+        'groupBuyInfo.expire_time_text': expireTimeText
+      });
+    }, 1000);
   },
 
   /**
@@ -956,7 +1073,11 @@ Page({
         spec_id: this.data.selectedSpec ? (this.data.selectedSpec.spec_id || this.data.selectedSpec.id || null) : null,
         spec_name: this.data.selectedSpec ? this.data.selectedSpec.name : null, // 规格名称，用于后端验证
         is_group_buy: this.data.buyType === 'group',
-        total_price: this.data.totalPrice
+        total_price: this.data.totalPrice,
+        // 拼团相关：如果有正在进行的拼团，传递group_id，否则由后端创建新拼团
+        group_id: this.data.buyType === 'group' && this.data.groupBuyInfo && this.data.groupBuyInfo.group_id 
+          ? this.data.groupBuyInfo.group_id 
+          : null
       };
       
       // 调用创建订单接口
@@ -966,6 +1087,15 @@ Page({
       
       if (result?.msg === 'success') {
         const order_id = result.data?.order_id;
+        const group_buy_status = result.data?.group_buy_status; // 拼团状态：pending-拼团中，success-成团成功，failed-拼团失败
+        
+        // 如果是拼团购买，刷新拼团信息
+        if (this.data.buyType === 'group') {
+          // 延迟一下再刷新，确保后端已处理完成
+          setTimeout(() => {
+            this.loadGroupBuyInfo();
+          }, 500);
+        }
         
         // 关闭购买弹窗
         this.onCloseBuyModal();
@@ -1405,38 +1535,36 @@ Page({
       let receiveTime = null;
       let hasComment = false;
       
-      // 如果有传入的订单ID，直接设置为可评价
-      if (orderId) {
-        canComment = true;
-        // 查询订单信息获取确认收货时间
-        try {
-          const orderResult = await ajax(`/order/detail?order_id=${orderId}`, 'GET', {});
-          if (orderResult?.msg === 'success' && orderResult.data) {
-            const order = orderResult.data;
-            receiveTime = order.receive_time || null;
-            // 检查是否已有评价
-            const commentResult = await ajax(`/comment/check?order_id=${orderId}`, 'GET', {});
-            if (commentResult?.msg === 'success') {
-              hasComment = commentResult.data?.has_comment || false;
-            }
-          }
-        } catch (e) {
-          console.error('查询订单详情失败:', e);
-        }
-      } else {
-        // 查询该用户对该商品的待评价订单（状态为review）
-        const result = await ajax(
-          `/order/check-comment?user_id=${user_id}&goods_id=${this.data.goods_id}`,
-          'GET',
-          {}
-        );
-        
-        if (result?.msg === 'success') {
-          const data = result.data || {};
+      // 如果有传入的订单ID，使用check-comment接口获取订单信息和评价状态
+      // 如果没有订单ID，也使用check-comment接口查询待评价订单
+      const result = await ajax(
+        `/order/check-comment?user_id=${user_id}&goods_id=${this.data.goods_id}${orderId ? `&order_id=${orderId}` : ''}`,
+        'GET',
+        {}
+      );
+      
+      if (result?.msg === 'success') {
+        const data = result.data || {};
+        // 如果有传入的订单ID，直接设置为可评价
+        if (orderId) {
+          canComment = true;
+        } else {
           canComment = data.can_comment || false;
           orderId = data.order_id || null;
-          receiveTime = data.receive_time || null; // 确认收货时间
-          hasComment = data.has_comment || false;
+        }
+        receiveTime = data.receive_time || null; // 确认收货时间
+        hasComment = data.has_comment || false;
+      } else if (orderId) {
+        // 如果接口调用失败但有订单ID，至少设置为可评价
+        // 然后尝试单独检查是否已有评价
+        canComment = true;
+        try {
+          const commentResult = await ajax(`/comment/check?order_id=${orderId}`, 'GET', {});
+          if (commentResult?.msg === 'success') {
+            hasComment = commentResult.data?.has_comment || false;
+          }
+        } catch (e) {
+          // 静默处理错误，不影响功能
         }
       }
       

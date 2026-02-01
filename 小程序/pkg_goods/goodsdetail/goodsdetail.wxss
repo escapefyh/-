@@ -94,6 +94,84 @@
   margin-right: 20rpx;
 }
 
+/* 拼团信息区域 */
+.group-buy-info-section {
+  background-color: #fff;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.group-buy-info-header {
+  margin-bottom: 20rpx;
+}
+
+.group-buy-info-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.group-buy-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.group-buy-status {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.group-buy-status-text {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.group-buy-count-text {
+  font-size: 28rpx;
+  color: #1296db;
+  font-weight: 500;
+}
+
+.group-buy-remaining {
+  padding: 12rpx 0;
+}
+
+.group-buy-remaining-text {
+  font-size: 26rpx;
+  color: #ff4444;
+}
+
+.group-buy-timer {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.timer-label {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.timer-value {
+  font-size: 24rpx;
+  color: #ff4444;
+  font-weight: 500;
+}
+
+.group-buy-info-empty {
+  padding: 40rpx 0;
+  text-align: center;
+}
+
+.group-buy-empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
 .group-buy-tag {
   background-color: #ffeb3b;
   padding: 8rpx 16rpx;

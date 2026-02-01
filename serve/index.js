@@ -64,7 +64,14 @@ app.use('/follow', followRoutes);     // /follow/count
 app.use('/browse', browseRoutes);     // /browse/count
 app.use('/comment', commentRoutes);   // /comment/list, /comment/create
 
+// 启动定时任务：处理过期的拼团组（每分钟执行一次）
+const processExpiredGroupBuys = require('./cron/groupBuyExpire');
+setInterval(() => {
+    processExpiredGroupBuys();
+}, 60 * 1000); // 60秒 = 1分钟
+
 // 启动服务
 app.listen(3000,() => {
     console.log('后端项目跑起来了，在端口号3000');
+    console.log('定时任务已启动：拼团过期检查（每分钟执行一次）');
 });

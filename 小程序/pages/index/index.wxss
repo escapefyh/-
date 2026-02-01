@@ -269,6 +269,22 @@
   font-size: 20rpx;
   color: #333;
   font-weight: 500;
+  z-index: 2;
+}
+
+/* NEW标签 */
+.new-badge {
+  position: absolute;
+  top: 10rpx;
+  left: 10rpx;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: bold;
+  z-index: 2;
+  box-shadow: 0 2rpx 8rpx rgba(255, 71, 87, 0.3);
 }
 
 /* 商品信息区域 */

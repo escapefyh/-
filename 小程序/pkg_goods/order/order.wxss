@@ -95,6 +95,13 @@
   margin-bottom: 20rpx;
 }
 
+.order-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex: 1;
+}
+
 .order-no {
   font-size: 26rpx;
   color: #666;

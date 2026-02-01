@@ -560,6 +560,11 @@ const OrderSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // 拼团组ID（外键，关联 group_buy 表）
+    group_id: {
+        type: String,
+        default: null
+    },
     // 订单总价
     total_price: {
         type: Number,
@@ -607,6 +612,7 @@ const OrderSchema = new mongoose.Schema({
 OrderSchema.index({ user_id: 1 }); // 便于查询用户的订单
 OrderSchema.index({ goods_id: 1 }); // 便于查询商品的订单
 OrderSchema.index({ order_no: 1 }); // 订单编号唯一索引
+OrderSchema.index({ group_id: 1 }); // 便于查询拼团组的订单
 
 const Order = mongoose.model("Order", OrderSchema);
 
@@ -816,6 +822,59 @@ BrowseHistorySchema.index({ user_id: 1, goods_id: 1 }); // 便于查询某个用
 
 const BrowseHistory = mongoose.model("BrowseHistory", BrowseHistorySchema);
 
+// 拼团组表（group_buy）
+const GroupBuySchema = new mongoose.Schema({
+    // 拼团组ID（主键）
+    group_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 商品ID
+    goods_id: {
+        type: String,
+        required: true
+    },
+    // 拼团所需人数
+    required_count: {
+        type: Number,
+        required: true
+    },
+    // 当前拼团人数
+    current_count: {
+        type: Number,
+        default: 1
+    },
+    // 状态：pending(拼团中), success(成团成功), failed(拼团失败)
+    status: {
+        type: String,
+        enum: ['pending', 'success', 'failed'],
+        default: 'pending'
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 过期时间（创建时间 + 24小时）
+    expire_time: {
+        type: Number,
+        required: true
+    },
+    // 成团成功时间（可选）
+    success_time: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引
+GroupBuySchema.index({ goods_id: 1, status: 1 }); // 便于查询某个商品的拼团组
+GroupBuySchema.index({ status: 1, expire_time: 1 }); // 便于查询过期的拼团组
+GroupBuySchema.index({ group_id: 1 }); // 拼团组ID索引
+
+const GroupBuy = mongoose.model("GroupBuy", GroupBuySchema);
+
 module.exports = {
     User,
     Goods,
@@ -832,5 +891,6 @@ module.exports = {
     RechargeRecord,
     PaymentRecord,
     Follow,
-    BrowseHistory
+    BrowseHistory,
+    GroupBuy
 };

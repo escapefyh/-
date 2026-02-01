@@ -38,6 +38,32 @@
       </view>
     </view>
 
+    <!-- 拼团信息（仅在开启拼团时显示） -->
+    <view wx:if="{{goods.group_buy_enabled}}" class="group-buy-info-section">
+      <view class="group-buy-info-header">
+        <text class="group-buy-info-title">拼团信息</text>
+      </view>
+      <!-- 有正在拼团的订单 -->
+      <view wx:if="{{groupBuyInfo && groupBuyCurrentCount > 0}}" class="group-buy-info-content">
+        <view class="group-buy-status">
+          <text class="group-buy-status-text">正在拼单中</text>
+          <text class="group-buy-count-text">{{groupBuyCurrentCount}}/{{groupBuyRequiredCount}}人</text>
+        </view>
+        <view class="group-buy-remaining">
+          <text class="group-buy-remaining-text">还差 {{groupBuyRemainingCount}} 人拼单成功</text>
+        </view>
+        <!-- 拼团倒计时 -->
+        <view wx:if="{{groupBuyInfo.expire_time}}" class="group-buy-timer">
+          <text class="timer-label">剩余时间：</text>
+          <text class="timer-value">{{groupBuyInfo.expire_time_text || ''}}</text>
+        </view>
+      </view>
+      <!-- 没有正在拼团的订单 -->
+      <view wx:else class="group-buy-info-empty">
+        <text class="group-buy-empty-text">暂无人在拼单，快来发起首单吧</text>
+      </view>
+    </view>
+
     <!-- 卖家信息 -->
     <view class="seller-section">
       <view class="seller-header">
@@ -82,27 +108,28 @@
       <view wx:if="{{commentList.length > 0}}" class="comment-list">
         <view 
           wx:for="{{commentList}}" 
-          wx:key="comment_id" 
+          wx:key="comment_id"
+          wx:for-item="comment"
           class="comment-item"
         >
           <view class="comment-user-info">
             <image 
               class="comment-avatar" 
-              src="{{item.user_avatar || '/assets/default_avatar.png'}}" 
+              src="{{comment.user_avatar || '/assets/default_avatar.png'}}" 
               mode="aspectFill"
             />
             <view class="comment-user-detail">
-              <text class="comment-user-name">{{item.user_nickname || '匿名用户'}}</text>
-              <text class="comment-time">{{item.create_time_formatted}}</text>
+              <text class="comment-user-name">{{comment.user_nickname || '匿名用户'}}</text>
+              <text class="comment-time">{{comment.create_time_formatted}}</text>
             </view>
             <view class="comment-rating">
-              <text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="star {{item.rating >= index ? 'star-filled' : 'star-empty'}}">★</text>
+              <text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" wx:for-item="starIndex" class="star {{comment.rating >= starIndex ? 'star-filled' : 'star-empty'}}">★</text>
             </view>
           </view>
-          <view class="comment-content">{{item.content}}</view>
-          <view wx:if="{{item.images && item.images.length > 0}}" class="comment-images">
+          <view class="comment-content">{{comment.content}}</view>
+          <view wx:if="{{comment.images && comment.images.length > 0}}" class="comment-images">
             <image 
-              wx:for="{{item.images}}" 
+              wx:for="{{comment.images}}" 
               wx:key="index"
               wx:for-item="img"
               class="comment-image" 
@@ -110,7 +137,7 @@
               mode="aspectFill"
               bind:tap="onPreviewCommentImage"
               data-url="{{img}}"
-              data-urls="{{item.images}}"
+              data-urls="{{comment.images}}"
             />
           </view>
         </view>
