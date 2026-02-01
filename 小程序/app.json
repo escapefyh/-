@@ -21,7 +21,9 @@
         "settings/settings",
         "changepassword/changepassword",
         "collect/collect",
-        "wallet/wallet"
+        "wallet/wallet",
+        "follow/follow",
+        "browse/browse"
       ]
     },
     {

@@ -1,0 +1,80 @@
+/* pkg_user/follow/follow.wxss */
+
+.follow-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+  font-size: 32rpx;
+  color: #999;
+}
+
+.follow-list {
+  padding: 20rpx;
+}
+
+.follow-item {
+  background-color: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.user-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.user-name {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.goods-count {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.unfollow-btn {
+  padding: 12rpx 24rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  background-color: #fff;
+  font-size: 26rpx;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.unfollow-btn:active {
+  background-color: #f5f5f5;
+}
+
+.loading-more,
+.no-more {
+  text-align: center;
+  padding: 40rpx 0;
+  font-size: 28rpx;
+  color: #999;
+}
+
+

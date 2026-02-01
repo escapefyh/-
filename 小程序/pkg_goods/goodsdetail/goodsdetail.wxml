@@ -46,8 +46,18 @@
           src="{{seller.avatar || '/assets/default_avatar.png'}}" 
           mode="aspectFill"
           binderror="onAvatarError"
+          bind:tap="onSellerAvatarClick"
         />
         <text class="seller-name">{{seller.nickname || seller.name || '未设置昵称'}}</text>
+        <!-- 关注按钮（非自己时显示） -->
+        <view wx:if="{{!isOwner}}" class="follow-btn-wrapper">
+          <view 
+            class="follow-btn {{isFollowed ? 'followed' : ''}}"
+            bind:tap="onFollowClick"
+          >
+            <text class="follow-btn-text">{{isFollowed ? '已关注' : '+ 关注'}}</text>
+          </view>
+        </view>
       </view>
     </view>
 

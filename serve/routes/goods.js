@@ -207,7 +207,7 @@ router.get('/detail', async (req, res) => {
 // 获取商品列表（包含卖家信息，支持分类筛选和搜索）
 router.get('/list', async (req, res) => {
     try {
-        const { page = 1, pageSize = 20, category_id, keyword } = req.query;
+        const { page = 1, pageSize = 20, category_id, keyword, seller_id } = req.query;
 
         // 1. 参数验证
         const pageNum = parseInt(page) || 1;
@@ -257,6 +257,11 @@ router.get('/list', async (req, res) => {
             }
         }
 
+        // 如果传入了卖家ID，添加卖家筛选条件
+        if (seller_id !== undefined && seller_id !== null && seller_id !== '') {
+            query.user_id = seller_id;
+        }
+
         const skip = (pageNum - 1) * pageSizeNum;
         const limit = pageSizeNum;
 
@@ -278,6 +283,7 @@ router.get('/list', async (req, res) => {
             sellerMap[seller.user_id] = {
                 user_id: seller.user_id,
                 nickname: seller.nickname || '',
+                name: seller.name || '',  // 添加 name 字段
                 avatar: processAvatarUrl(seller.avatar || '') // 处理头像URL
             };
         });
@@ -327,6 +333,7 @@ router.get('/list', async (req, res) => {
                 seller: sellerMap[goods.user_id] || {
                     user_id: goods.user_id,
                     nickname: '',
+                    name: '',
                     avatar: '/assets/default_avatar.png'
                 }
             };

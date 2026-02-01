@@ -16,7 +16,9 @@ Page({
     categoryId: null,      // 分类ID（可选）
     categoryName: '',      // 分类名称（用于显示标题）
     searchKeyword: '',     // 搜索关键词
-    isSearching: false     // 是否处于搜索状态
+    isSearching: false,    // 是否处于搜索状态
+    sellerId: null,        // 卖家ID（可选）
+    sellerName: ''         // 卖家名称（用于显示标题）
   },
 
   /**
@@ -41,6 +43,26 @@ Page({
       }
       
       console.log('加载分类商品，分类ID:', categoryId, '分类名称:', categoryName);
+    }
+    
+    // 获取卖家ID和名称（如果是从卖家页面跳转过来的）
+    if (options.seller_id) {
+      const sellerId = options.seller_id;
+      const sellerName = decodeURIComponent(options.seller_name || '');
+      
+      this.setData({
+        sellerId: sellerId,
+        sellerName: sellerName
+      });
+      
+      // 设置页面标题
+      if (sellerName) {
+        wx.setNavigationBarTitle({
+          title: sellerName + '的商品'
+        });
+      }
+      
+      console.log('加载卖家商品，卖家ID:', sellerId, '卖家名称:', sellerName);
     }
     
     this.loadGoodsList();
@@ -72,6 +94,11 @@ Page({
       // 如果有搜索关键词则添加 keyword 参数
       if (this.data.searchKeyword && this.data.searchKeyword.trim()) {
         requestUrl += `&keyword=${encodeURIComponent(this.data.searchKeyword.trim())}`;
+      }
+      
+      // 如果有卖家ID则添加 seller_id 参数
+      if (this.data.sellerId) {
+        requestUrl += `&seller_id=${this.data.sellerId}`;
       }
       
       console.log('请求商品列表，URL:', requestUrl);
@@ -271,6 +298,7 @@ Page({
     }
   }
 })
+
 
 
 

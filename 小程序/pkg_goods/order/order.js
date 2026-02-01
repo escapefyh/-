@@ -818,15 +818,35 @@ Page({
 
   /**
    * 去评价（买家操作）
+   * 跳转到商品详情页面，并自动打开评价弹窗
    */
   onReviewOrder(e) {
     const order_id = e.currentTarget.dataset.orderId;
     if (!order_id) return;
     
-    // TODO: 跳转到评价页面
-    wx.showToast({
-      title: '评价功能开发中',
-      icon: 'none'
+    // 从订单列表中查找该订单
+    const order = this.data.orderList.find(item => item.order_id == order_id);
+    if (!order) {
+      wx.showToast({
+        title: '订单信息不存在',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 获取商品ID
+    const goods_id = order.goods_id;
+    if (!goods_id) {
+      wx.showToast({
+        title: '商品信息不存在',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 跳转到商品详情页面，并传递参数让页面自动打开评价弹窗
+    wx.navigateTo({
+      url: `/pkg_goods/goodsdetail/goodsdetail?goods_id=${goods_id}&auto_comment=1&order_id=${order_id}`
     });
   },
 

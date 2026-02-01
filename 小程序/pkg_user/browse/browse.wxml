@@ -1,0 +1,57 @@
+<!--pkg_user/browse/browse.wxml-->
+<view class="browse-page">
+  <!-- 加载中状态 -->
+  <view wx:if="{{loading && browseList.length === 0}}" class="loading-container">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!loading && browseList.length === 0}}" class="empty-container">
+    <text>暂无浏览记录</text>
+  </view>
+
+  <!-- 浏览记录列表 -->
+  <view wx:else class="browse-list">
+    <view
+      class="browse-item"
+      wx:for="{{browseList}}"
+      wx:key="goods_id"
+      bind:tap="onGoodsClick"
+      data-goods-id="{{item.goods_id}}"
+    >
+      <!-- 商品图片 -->
+      <image
+        class="goods-image"
+        src="{{item.image || '/assets/store.png'}}"
+        mode="aspectFill"
+      />
+      
+      <!-- 商品信息 -->
+      <view class="goods-info">
+        <text class="goods-description">{{item.description}}</text>
+        <view class="goods-meta">
+          <text class="goods-price">¥{{item.price}}</text>
+          <text class="browse-time">{{item.browse_time_text}}</text>
+        </view>
+      </view>
+      
+      <!-- 删除按钮 -->
+      <view 
+        class="delete-btn"
+        catch:tap="onDeleteClick"
+        data-goods-id="{{item.goods_id}}"
+        data-index="{{index}}"
+      >
+        <text>×</text>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 清空记录按钮 -->
+  <view wx:if="{{browseList.length > 0}}" class="clear-section">
+    <view class="clear-btn" bind:tap="onClearAll">
+      <text>清空浏览记录</text>
+    </view>
+  </view>
+</view>
+

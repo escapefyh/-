@@ -51,13 +51,17 @@ Page({
     canComment: false,       // 是否可以评价（已完成交易且未评价）
     showCommentReminder: false, // 是否显示评价提醒
     completedOrderId: null,   // 已完成的订单ID（用于评价）
+    autoComment: false ,       // 是否自动打开评价弹窗
     
     // 评论弹窗相关
     showCommentModal: false, // 是否显示评论弹窗
     commentRating: 5,        // 评价星级（1-5）
     commentContent: '',       // 评价内容
     commentImages: [],        // 评价图片
-    submittingComment: false  // 提交评论中
+    submittingComment: false,  // 提交评论中
+    
+    // 关注相关
+    isFollowed: false         // 是否已关注卖家
   },
 
   /**
@@ -75,7 +79,17 @@ Page({
       }, 1500);
       return;
     }
-    this.setData({ goods_id });
+    
+    // 检查是否自动打开评价弹窗
+    const autoComment = options.auto_comment === '1' || options.auto_comment === 'true';
+    const orderId = options.order_id || null;
+    
+    this.setData({ 
+      goods_id,
+      autoComment,
+      completedOrderId: orderId
+    });
+    
     this.loadGoodsDetail();
   },
 
@@ -248,11 +262,26 @@ Page({
         this.loadCommentCount();
         this.loadFavoriteCount();
         
+        // 加载关注状态（如果不是自己）
+        if (!isOwner) {
+          this.loadFollowStatus();
+        }
+        
         // 加载评论列表
         this.loadCommentList();
         
+        // 保存浏览记录到本地缓存
+        this.saveBrowseHistory();
+        
         // 检查是否可以评价（已完成交易但未评价）
-        this.checkCanComment();
+        this.checkCanComment().then(() => {
+          // 如果设置了自动打开评价弹窗，且可以评价，则自动打开
+          if (this.data.autoComment && this.data.canComment) {
+            setTimeout(() => {
+              this.onShowCommentModal();
+            }, 500); // 延迟500ms，确保页面已渲染完成
+          }
+        });
       } else {
         console.error('API返回错误:', result);
         wx.showToast({
@@ -493,6 +522,123 @@ Page({
           icon: 'none'
         });
       });
+  },
+
+  /**
+   * 加载关注状态
+   */
+  async loadFollowStatus() {
+    try {
+      const user_id = wx.getStorageSync('user_id');
+      if (!user_id) {
+        this.setData({ isFollowed: false });
+        return;
+      }
+      
+      const seller_id = this.data.seller?.user_id;
+      if (!seller_id) {
+        return;
+      }
+      
+      const result = await ajax(
+        `/follow/check?user_id=${user_id}&followed_id=${seller_id}`,
+        'GET',
+        {}
+      );
+      
+      if (result?.msg === 'success') {
+        this.setData({
+          isFollowed: !!result.data?.is_followed
+        });
+      }
+    } catch (error) {
+      console.error('获取关注状态失败:', error);
+      // 失败不影响页面基本显示，静默处理
+    }
+  },
+
+  /**
+   * 点击关注按钮
+   */
+  onFollowClick() {
+    const user_id = wx.getStorageSync('user_id');
+    if (!user_id) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      setTimeout(() => {
+        wx.navigateTo({
+          url: '/pkg_user/login/login'
+        });
+      }, 1500);
+      return;
+    }
+    
+    const seller_id = this.data.seller?.user_id;
+    if (!seller_id) {
+      wx.showToast({
+        title: '卖家信息不存在',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    const { isFollowed } = this.data;
+    
+    // 调用后端接口切换关注状态
+    ajax('/follow/toggle', 'POST', { 
+      user_id, 
+      followed_id: seller_id 
+    })
+      .then(res => {
+        if (res?.msg === 'success') {
+          const data = res.data || {};
+          const nextFollowed = typeof data.is_followed === 'boolean'
+            ? data.is_followed
+            : !isFollowed;
+          
+          this.setData({
+            isFollowed: nextFollowed
+          });
+          
+          wx.showToast({
+            title: nextFollowed ? '已关注' : '已取消关注',
+            icon: 'success'
+          });
+        } else {
+          wx.showToast({
+            title: res?.error || '关注操作失败',
+            icon: 'none'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('切换关注状态失败:', err);
+        wx.showToast({
+          title: '网络异常，请稍后重试',
+          icon: 'none'
+        });
+      });
+  },
+
+  /**
+   * 点击卖家头像
+   */
+  onSellerAvatarClick() {
+    const seller_id = this.data.seller?.user_id;
+    if (!seller_id) {
+      wx.showToast({
+        title: '卖家信息不存在',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 跳转到卖家商品列表页面
+    wx.navigateTo({
+      url: `/pkg_goods/goodslist/goodslist?seller_id=${seller_id}&seller_name=${encodeURIComponent(this.data.seller.nickname || this.data.seller.name || '卖家')}`
+    });
   },
 
   /**
@@ -1250,47 +1396,76 @@ Page({
    */
   async checkCanComment() {
     const user_id = wx.getStorageSync('user_id');
-    if (!user_id) return;
+    if (!user_id) return Promise.resolve();
     
     try {
-      // 查询该用户对该商品的待评价订单（状态为review）
-      const result = await ajax(
-        `/order/check-comment?user_id=${user_id}&goods_id=${this.data.goods_id}`,
-        'GET',
-        {}
-      );
+      // 如果已经有订单ID（从URL参数传入），直接使用
+      let orderId = this.data.completedOrderId;
+      let canComment = false;
+      let receiveTime = null;
+      let hasComment = false;
       
-      if (result?.msg === 'success') {
-        const data = result.data || {};
-        const canComment = data.can_comment || false;
-        const orderId = data.order_id || null;
-        const receiveTime = data.receive_time || null; // 确认收货时间
-        const hasComment = data.has_comment || false;
-        
-        // 如果待评价且未评价，显示评价提醒
-        if (canComment && !hasComment) {
-          // 检查是否超过7天（从确认收货时间开始计算）
-          if (receiveTime) {
-            const receiveDate = new Date(receiveTime);
-            const now = new Date();
-            const diffDays = Math.floor((now - receiveDate) / (1000 * 60 * 60 * 24));
-            
-            // 如果超过7天，自动好评
-            if (diffDays > 7) {
-              await this.autoGoodComment(orderId);
-              return;
+      // 如果有传入的订单ID，直接设置为可评价
+      if (orderId) {
+        canComment = true;
+        // 查询订单信息获取确认收货时间
+        try {
+          const orderResult = await ajax(`/order/detail?order_id=${orderId}`, 'GET', {});
+          if (orderResult?.msg === 'success' && orderResult.data) {
+            const order = orderResult.data;
+            receiveTime = order.receive_time || null;
+            // 检查是否已有评价
+            const commentResult = await ajax(`/comment/check?order_id=${orderId}`, 'GET', {});
+            if (commentResult?.msg === 'success') {
+              hasComment = commentResult.data?.has_comment || false;
             }
           }
-          
-          this.setData({
-            canComment: true,
-            showCommentReminder: true,
-            completedOrderId: orderId
-          });
+        } catch (e) {
+          console.error('查询订单详情失败:', e);
+        }
+      } else {
+        // 查询该用户对该商品的待评价订单（状态为review）
+        const result = await ajax(
+          `/order/check-comment?user_id=${user_id}&goods_id=${this.data.goods_id}`,
+          'GET',
+          {}
+        );
+        
+        if (result?.msg === 'success') {
+          const data = result.data || {};
+          canComment = data.can_comment || false;
+          orderId = data.order_id || null;
+          receiveTime = data.receive_time || null; // 确认收货时间
+          hasComment = data.has_comment || false;
         }
       }
+      
+      // 如果待评价且未评价，显示评价提醒
+      if (canComment && !hasComment && orderId) {
+        // 检查是否超过7天（从确认收货时间开始计算）
+        if (receiveTime) {
+          const receiveDate = new Date(receiveTime);
+          const now = new Date();
+          const diffDays = Math.floor((now - receiveDate) / (1000 * 60 * 60 * 24));
+          
+          // 如果超过7天，自动好评
+          if (diffDays > 7) {
+            await this.autoGoodComment(orderId);
+            return Promise.resolve();
+          }
+        }
+        
+        this.setData({
+          canComment: true,
+          showCommentReminder: true,
+          completedOrderId: orderId
+        });
+      }
+      
+      return Promise.resolve();
     } catch (error) {
       console.error('检查是否可以评价失败:', error);
+      return Promise.resolve();
     }
   },
 
@@ -1325,6 +1500,65 @@ Page({
       }
     } catch (error) {
       console.error('自动好评失败:', error);
+    }
+  },
+
+  /**
+   * 保存浏览记录到本地缓存
+   */
+  saveBrowseHistory() {
+    try {
+      const { goods_id, goods } = this.data;
+      if (!goods_id || !goods || !goods.description) {
+        return; // 商品信息不完整，不保存
+      }
+      
+      // 从本地缓存读取历史记录
+      let browseHistory = wx.getStorageSync('browse_history') || [];
+      
+      // 去重：如果该商品已存在，先删除旧记录
+      browseHistory = browseHistory.filter(item => item.goods_id != goods_id);
+      
+      // 构建新的浏览记录
+      const browseRecord = {
+        goods_id: goods_id,
+        description: goods.description || '',
+        price: goods.price || 0,
+        image: (goods.images && goods.images.length > 0) ? goods.images[0] : '',
+        browse_time: new Date().toISOString() // 使用ISO格式保存时间
+      };
+      
+      // 添加到最前面（最新的在最前面）
+      browseHistory.unshift(browseRecord);
+      
+      // 限制最多20条
+      if (browseHistory.length > 20) {
+        browseHistory = browseHistory.slice(0, 20);
+      }
+      
+      // 保存回本地缓存
+      wx.setStorageSync('browse_history', browseHistory);
+      
+      // 更新个人中心的浏览数量
+      this.updatePersonPageBrowseCount();
+    } catch (error) {
+      console.error('保存浏览记录失败:', error);
+      // 静默失败，不影响页面正常使用
+    }
+  },
+
+  /**
+   * 更新个人中心页面的浏览数量
+   */
+  updatePersonPageBrowseCount() {
+    try {
+      const pages = getCurrentPages();
+      const personPage = pages.find(page => page.route === 'pages/person/person');
+      if (personPage && typeof personPage.loadBrowseCount === 'function') {
+        personPage.loadBrowseCount();
+      }
+    } catch (error) {
+      console.error('更新个人中心浏览数量失败:', error);
     }
   },
 

@@ -45,10 +45,8 @@ Page({
    * 跳转到我的关注页面
    */
   goToFollow() {
-    // TODO: 创建我的关注页面
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    wx.navigateTo({
+      url: '/pkg_user/follow/follow'
     });
   },
 
@@ -56,10 +54,8 @@ Page({
    * 跳转到历史浏览页面
    */
   goToBrowse() {
-    // TODO: 创建历史浏览页面
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    wx.navigateTo({
+      url: '/pkg_user/browse/browse'
     });
   },
 
@@ -171,6 +167,8 @@ Page({
         });
         // 加载统计数据
         this.loadStatistics(user_id);
+        // 加载历史浏览数量（从本地缓存）
+        this.loadBrowseCount();
         // 加载待处理事项
         this.loadPendingItems(user_id);
       } else {
@@ -210,13 +208,8 @@ Page({
         });
       }
 
-      // 加载历史浏览数量
-      const browseResult = await ajax(`/browse/count?user_id=${user_id}`, 'GET', {});
-      if (browseResult?.msg === 'success') {
-        this.setData({
-          browseCount: browseResult.data?.count || 0
-        });
-      }
+      // 加载历史浏览数量（从本地缓存读取）
+      this.loadBrowseCount();
 
       // 加载我发布的数量
       const publishedResult = await ajax(`/goods/my/count?user_id=${user_id}`, 'GET', {});
@@ -244,6 +237,23 @@ Page({
     } catch (error) {
       console.error('加载统计数据失败:', error);
       // 静默失败，不影响页面显示
+    }
+  },
+
+  /**
+   * 加载历史浏览数量（从本地缓存读取）
+   */
+  loadBrowseCount() {
+    try {
+      const browseHistory = wx.getStorageSync('browse_history') || [];
+      this.setData({
+        browseCount: browseHistory.length
+      });
+    } catch (error) {
+      console.error('加载浏览数量失败:', error);
+      this.setData({
+        browseCount: 0
+      });
     }
   },
 
@@ -294,6 +304,7 @@ Page({
 
   /**
    * 跳转到待评价订单（买家）
+   * 跳转到订单页面，显示待评价的订单
    */
   goToPendingReview() {
     wx.navigateTo({
