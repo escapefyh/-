@@ -160,6 +160,16 @@ Page({
         if (!goods.images || !Array.isArray(goods.images)) {
           goods.images = [];
         }
+        // ✨✨✨ 开始添加：前端强制 HTTPS 修复逻辑 ✨✨✨
+        if (goods.images && goods.images.length > 0) {
+           goods.images = goods.images.map(url => {
+             if (url && typeof url === 'string' && url.startsWith('http://')) {
+               return url.replace('http://', 'https://');
+             }
+             return url;
+           });
+        }
+        // ✨✨✨ 结束添加 ✨✨✨
         
         // 确保 seller 是对象
         if (!seller || typeof seller !== 'object') {

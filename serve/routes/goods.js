@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods, Comment, Favorite, SpecOption, Follow } = require('../db');
+const { User, Goods, Comment, Favorite, SpecOption, Follow, BrowseHistory } = require('../db');
 
 // 处理图片URL，确保返回完整的OSS URL
 // 修改 routes/goods.js 中的 processImageUrls 函数
 
+// 处理图片URL，确保返回完整的OSS URL，并强制使用 HTTPS
 const processImageUrls = (images) => {
     // 1. 如果是空，直接返回空数组
     if (!images) return [];
@@ -15,10 +16,9 @@ const processImageUrls = (images) => {
     if (Array.isArray(images)) {
         imageList = images;
     } 
-    // 3. 关键修复：如果是字符串，尝试解析 JSON 或作为单图处理
+    // 3. 如果是字符串，尝试解析 JSON
     else if (typeof images === 'string') {
         try {
-            // 尝试解析 JSON 字符串，例如 '["url1", "url2"]'
             const parsed = JSON.parse(images);
             if (Array.isArray(parsed)) {
                 imageList = parsed;
@@ -26,28 +26,46 @@ const processImageUrls = (images) => {
                 imageList = [images];
             }
         } catch (e) {
-            // 解析失败，说明是普通 URL 字符串
             imageList = [images];
         }
     } else {
         return [];
     }
 
-    // 4. 对提取出的 URL 列表进行处理（拼接 OSS 域名等）
-    return imageList.map(img => {
-        if (!img) return '';
-        // 如果已经是完整 URL，直接返回
-        if (typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))) {
+    // 4. 对提取出的 URL 列表进行处理，过滤空值并转换为 HTTPS
+    return imageList
+        .map(img => {
+            // 过滤空值（null、undefined、空字符串）
+            if (!img || (typeof img === 'string' && img.trim() === '')) {
+                return null;
+            }
+            
+            // ✨ 核心修复：如果是字符串
+            if (typeof img === 'string') {
+                // 强制将 http:// 替换为 https://
+                if (img.startsWith('http://')) {
+                    return img.replace('http://', 'https://');
+                }
+                // 如果已经是 https，直接返回
+                if (img.startsWith('https://')) {
+                    return img;
+                }
+            }
+
+            // 如果是相对路径，拼接 OSS 域名
+            const ossDomain = process.env.OSS_DOMAIN || '';
+            if (ossDomain && typeof img === 'string') {
+                const path = img.startsWith('/') ? img.substring(1) : img;
+                // 确保 OSS 域名也是 https
+                let finalDomain = ossDomain;
+                if (finalDomain.startsWith('http://')) {
+                    finalDomain = finalDomain.replace('http://', 'https://');
+                }
+                return `${finalDomain}/${path}`;
+            }
             return img;
-        }
-        // 如果是相对路径，拼接 OSS 域名
-        const ossDomain = process.env.OSS_DOMAIN || '';
-        if (ossDomain && typeof img === 'string') {
-            const path = img.startsWith('/') ? img.substring(1) : img;
-            return `${ossDomain}/${path}`;
-        }
-        return img;
-    });
+        })
+        .filter(img => img !== null && img !== ''); // 过滤掉 null 和空字符串
 };
 
 // 分类ID到分类名称的映射
@@ -83,7 +101,7 @@ const formatDateTime = (timestamp) => {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
-// 处理头像URL，确保返回有效的URL
+// 处理头像URL，确保返回有效的URL，并强制使用 HTTPS
 // 根据文档要求：如果用户未设置头像，返回相对路径 /assets/default_avatar.png
 // 禁止返回示例URL（如 your-domain.com、example.com），否则会导致403错误
 const processAvatarUrl = (avatar) => {
@@ -97,6 +115,10 @@ const processAvatarUrl = (avatar) => {
         // 检查是否是示例URL，如果是则返回相对路径
         if (avatar.includes('your-domain.com') || avatar.includes('example.com')) {
             return '/assets/default_avatar.png';
+        }
+        // ✨ 核心修复：强制将 http:// 替换为 https://
+        if (avatar.startsWith('http://')) {
+            return avatar.replace('http://', 'https://');
         }
         return avatar;
     }
@@ -881,6 +903,189 @@ router.post('/update', async (req, res) => {
         res.status(200).json({
             msg: "error",
             error: "服务器错误"
+        });
+    }
+});
+
+// 获取热度榜商品列表
+router.get('/hot', async (req, res) => {
+    try {
+        const { page = 1, pageSize = 20 } = req.query;
+
+        // 1. 参数验证
+        const pageNum = parseInt(page) || 1;
+        const pageSizeNum = parseInt(pageSize) || 20;
+
+        if (pageNum < 1) {
+            return res.status(200).json({
+                msg: "error",
+                error: "页码必须大于0"
+            });
+        }
+
+        if (pageSizeNum < 1 || pageSizeNum > 100) {
+            return res.status(200).json({
+                msg: "error",
+                error: "每页数量必须在1-100之间"
+            });
+        }
+
+        // 2. 查询所有商品
+        const allGoods = await Goods.find({}).lean();
+
+        // 3. 获取所有商品ID
+        const goodsIds = allGoods.map(g => g.goods_id);
+
+        // 4. 批量统计每个商品的浏览量（使用聚合查询提高性能）
+        const viewsAggregation = await BrowseHistory.aggregate([
+            { $match: { goods_id: { $in: goodsIds } } },
+            { $group: { _id: '$goods_id', views: { $sum: 1 } } }
+        ]);
+        const viewsMap = {};
+        viewsAggregation.forEach(item => {
+            viewsMap[item._id] = item.views;
+        });
+
+        // 5. 批量统计每个商品的收藏量（使用聚合查询提高性能）
+        const favoritesAggregation = await Favorite.aggregate([
+            { $match: { goods_id: { $in: goodsIds } } },
+            { $group: { _id: '$goods_id', favorites: { $sum: 1 } } }
+        ]);
+        const favoritesMap = {};
+        favoritesAggregation.forEach(item => {
+            favoritesMap[item._id] = item.favorites;
+        });
+
+        // 6. 批量查询规格库存（用于计算总库存）
+        const specOptions = await SpecOption.find({ goods_id: { $in: goodsIds } })
+            .select('goods_id stock')
+            .lean();
+        
+        const stockMap = {};
+        specOptions.forEach(spec => {
+            if (!stockMap[spec.goods_id]) {
+                stockMap[spec.goods_id] = 0;
+            }
+            stockMap[spec.goods_id] += (spec.stock || 0);
+        });
+
+        // 7. 批量查询卖家信息
+        const userIds = [...new Set(allGoods.map(g => g.user_id))];
+        const sellers = await User.find({ user_id: { $in: userIds } }).lean();
+        const sellerMap = {};
+        sellers.forEach(seller => {
+            sellerMap[seller.user_id] = {
+                user_id: seller.user_id,
+                nickname: seller.nickname || '',
+                avatar: processAvatarUrl(seller.avatar || '')
+            };
+        });
+
+        // 8. 计算当前时间（用于时效加成计算）
+        const currentTime = new Date().getTime();
+        const twentyFourHoursAgo = currentTime - 24 * 60 * 60 * 1000;
+
+        // 9. 计算每个商品的热度值并组装数据
+        const goodsWithHeat = allGoods.map(goods => {
+            // 获取统计数据
+            const views = viewsMap[goods.goods_id] || 0;
+            const favorites = favoritesMap[goods.goods_id] || 0;
+            const sales = goods.sales_count || 0;
+            const groupBuyCount = goods.group_buy_count || 0;
+            const totalSales = sales + groupBuyCount;
+
+            // 生成基础分（100-500之间的固定值，基于商品ID的哈希值）
+            // 使用简单的哈希函数确保同一商品每次得到相同的基础分
+            let hash = 0;
+            for (let i = 0; i < goods.goods_id.length; i++) {
+                const char = goods.goods_id.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            const baseScore = Math.abs(hash % 400) + 100; // 100-500之间
+
+            // 计算时效加成（24小时内发布的新品额外给200分）
+            let freshnessBonus = 0;
+            if (goods.create_time && goods.create_time >= twentyFourHoursAgo) {
+                freshnessBonus = 200;
+            }
+
+            // 计算热度值
+            // 热度值 = 基础分 + (浏览量 × 1) + (收藏量 × 10) + (销量/拼单 × 50) + 时效加成
+            const heatScore = baseScore + (views * 1) + (favorites * 10) + (totalSales * 50) + freshnessBonus;
+
+            // 计算库存（如果开启了规格，从规格中计算；否则返回 null）
+            let stock = null;
+            let inventory = null;
+            if (goods.spec_enabled) {
+                stock = stockMap[goods.goods_id] || 0;
+                inventory = stock;
+            }
+
+            return {
+                goods: goods,
+                heatScore: heatScore,
+                views: views,
+                favorites: favorites,
+                stock: stock,
+                inventory: inventory,
+                baseScore: baseScore
+            };
+        });
+
+        // 10. 按热度值降序排序
+        goodsWithHeat.sort((a, b) => b.heatScore - a.heatScore);
+
+        // 11. 分页处理
+        const skip = (pageNum - 1) * pageSizeNum;
+        const paginatedGoods = goodsWithHeat.slice(skip, skip + pageSizeNum);
+
+        // 12. 组装返回数据
+        const result = paginatedGoods.map(item => {
+            const goods = item.goods;
+            const processedImages = processImageUrls(goods.images);
+
+            return {
+                goods_id: goods.goods_id,
+                description: goods.description,
+                price: goods.price,
+                images: processedImages,
+                create_time: formatISO8601(goods.create_time),
+                seller: sellerMap[goods.user_id] || {
+                    user_id: goods.user_id,
+                    nickname: '',
+                    avatar: '/assets/default_avatar.png'
+                },
+                group_buy_enabled: goods.group_buy_enabled || false,
+                group_buy_discount: goods.group_buy_discount || null,
+                category_id: goods.category_id,
+                stock: item.stock,
+                inventory: item.inventory,
+                views: item.views,
+                favorites: item.favorites,
+                favorite_count: item.favorites,
+                sales_count: goods.sales_count || 0,
+                sales: goods.sales_count || 0,
+                group_buy_count: goods.group_buy_count || null,
+                base_score: item.baseScore
+            };
+        });
+
+        // 13. 返回成功响应
+        res.json({
+            msg: "success",
+            data: {
+                list: result,
+                total: goodsWithHeat.length,
+                page: pageNum,
+                pageSize: pageSizeNum
+            }
+        });
+    } catch (error) {
+        console.log('获取热度榜失败:', error);
+        res.status(200).json({
+            msg: "error",
+            error: "获取热度榜失败"
         });
     }
 });

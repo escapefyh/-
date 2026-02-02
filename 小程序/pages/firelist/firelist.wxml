@@ -1,2 +1,122 @@
 <!--pages/firelist/firelist.wxml-->
-<text>pages/firelist/firelist.wxml</text>
+<view class="container">
+  <!-- 顶部氛围营造区 -->
+  <view class="header-section">
+    <view class="header-content">
+      <!-- 左侧：标题区域 -->
+      <view class="header-left">
+        <view class="main-title">🔥 热度榜</view>
+        <view class="sub-title">实时更新 • 手慢无</view>
+      </view>
+      
+      <!-- 右侧：倒计时 -->
+      <view class="header-right">
+        <view class="countdown-label">距本场更新</view>
+        <view class="countdown-box">
+          <view class="countdown-item">{{countdown.hours}}</view>
+          <text class="countdown-separator">:</text>
+          <view class="countdown-item">{{countdown.minutes}}</view>
+          <text class="countdown-separator">:</text>
+          <view class="countdown-item">{{countdown.seconds}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 列表容器（向上覆盖Header） -->
+  <view class="list-container">
+    <!-- 加载中状态 -->
+    <view wx:if="{{loading && goodsList.length === 0}}" class="loading-container">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{!loading && goodsList.length === 0}}" class="empty-container">
+      <text>暂无热度商品</text>
+    </view>
+
+    <!-- 商品列表 -->
+    <view wx:else class="goods-list">
+      <view 
+        class="goods-card {{item.rank <= 3 ? 'top-three' : ''}}"
+        wx:for="{{goodsList}}" 
+        wx:key="goods_id"
+        bindtap="onGoodsClick"
+        data-goods-id="{{item.goods_id}}"
+      >
+        <!-- 左侧：图片区（35%宽度） -->
+        <view class="goods-image-wrapper">
+          <image 
+            wx:if="{{item.images && item.images.length > 0 && item.images[0]}}"
+            class="goods-image" 
+            src="{{item.images[0]}}" 
+            mode="aspectFill"
+            lazy-load="{{true}}"
+            binderror="onImageError"
+            data-index="{{index}}"
+            data-goods-id="{{item.goods_id}}"
+          />
+          <image 
+            wx:else
+            class="goods-image" 
+            src="/assets/store.png" 
+            mode="aspectFill"
+          />
+          
+          <!-- 排名角标（左上角） -->
+          <view class="rank-badge rank-{{item.rank <= 3 ? item.rank : 'other'}}">
+            <text class="rank-text">{{item.rank}}</text>
+          </view>
+          
+          <!-- 孤品角标（底部） -->
+          <view wx:if="{{item.isOnlyOne}}" class="stock-tag">
+            <text>仅 1 件</text>
+          </view>
+        </view>
+
+        <!-- 右侧：信息区（65%宽度） -->
+        <view class="goods-info-wrapper">
+          <!-- 第一行：标题 -->
+          <view class="goods-title">{{item.description}}</view>
+          
+          <!-- 第二行：热度进度条 -->
+          <view class="heat-section">
+            <view class="heat-bar-wrapper">
+              <view class="heat-bar-bg">
+                <view class="heat-bar-fill" style="width: {{item.heatProgress}}%"></view>
+              </view>
+              <text class="heat-text">🔥 热度 {{item.heatScore}}</text>
+            </view>
+          </view>
+          
+          <!-- 第三行：价格与按钮 -->
+          <view class="action-section">
+            <!-- 价格（左下角） -->
+            <view class="price-wrapper">
+              <text class="price-symbol">¥</text>
+              <text class="price-number">{{item.price}}</text>
+            </view>
+            
+            <!-- 按钮（右下角） -->
+            <view 
+              class="action-button {{item.rank <= 3 ? 'pulse' : ''}}"
+              bindtap="onButtonClick"
+              data-goods-id="{{item.goods_id}}"
+              catchtap="true"
+            >
+              <text>{{item.rank <= 3 ? '马上抢' : '去看看'}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多提示 -->
+    <view wx:if="{{loading && goodsList.length > 0}}" class="loading-more">
+      <text>加载中...</text>
+    </view>
+    <view wx:if="{{!hasMore && goodsList.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+  </view>
+</view>
