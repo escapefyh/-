@@ -71,6 +71,7 @@ Page({
     page: 1,                 // 当前页码
     pageSize: 20,            // 每页数量
     total: 0,                // 总数据量
+    maxHeatInList: 0,        // 当前列表中的最高热度值（用于动态计算进度条上限）
     
     // 倒计时相关
     countdown: {
@@ -184,17 +185,21 @@ Page({
 
   /**
    * 计算热度进度条百分比
-   * 为了营造"马上爆表"的感觉，如果热度很高，进度条要几乎撑满（90%）
+   * 根据当前列表中的最高热度值动态计算上限，确保第一名永远接近满格
+   * @param {number} heatScore - 当前商品的热度值
+   * @param {number} maxHeatInList - 当前列表中的最高热度值（第一名的热度值）
    */
-  calculateHeatProgress(heatScore) {
-    // 假设最高热度为10000，超过这个值就显示90%以上
-    const maxHeat = 10000;
-    let progress = (heatScore / maxHeat) * 100;
-    
-    // 如果热度超过8000，显示90%以上，营造紧迫感
-    if (heatScore >= 8000) {
-      progress = 90 + ((heatScore - 8000) / 2000) * 10; // 8000-10000映射到90-100%
+  calculateHeatProgress(heatScore, maxHeatInList) {
+    if (!maxHeatInList || maxHeatInList <= 0) {
+      // 如果没有最高值，使用默认值
+      return Math.min(100, (heatScore / 10000) * 100);
     }
+    
+    // 上限值 = 第一名的热度值 × 1.1，这样第一名的进度条会达到约90%
+    const maxHeat = maxHeatInList * 1.1;
+    
+    // 计算进度百分比
+    let progress = (heatScore / maxHeat) * 100;
     
     // 限制在0-100%之间
     progress = Math.min(100, Math.max(0, progress));
@@ -232,8 +237,8 @@ Page({
         const list = result.data?.list || [];
         const total = result.data?.total || 0;
         
-        // 处理每个商品，计算热度值和进度
-        const processedList = list.map((item, index) => {
+        // 第一步：处理每个商品，计算热度值（先不计算进度）
+        const tempList = list.map((item, index) => {
           // 确保 images 是数组，并将所有HTTP URL转换为HTTPS
           if (!item.images || !Array.isArray(item.images)) {
             item.images = [];
@@ -257,9 +262,6 @@ Page({
           // 计算热度值
           item.heatScore = this.calculateHeatScore(item);
           
-          // 计算热度进度
-          item.heatProgress = this.calculateHeatProgress(item.heatScore);
-          
           // 排名（从1开始）
           item.rank = index + 1 + (currentPage - 1) * this.data.pageSize;
           
@@ -274,14 +276,54 @@ Page({
           return item;
         });
         
-        const currentList = isRefresh ? [] : this.data.goodsList;
-        const newList = [...currentList, ...processedList];
+        // 第二步：找到当前列表中的最高热度值（第一名的热度值）
+        // 由于后端按热度排序，第一页的第一个商品就是最高热度的
+        let maxHeatInList = this.data.maxHeatInList || 0;
+        
+        if (isRefresh || currentPage === 1) {
+          // 刷新或第一页：使用当前页的最高热度值（应该是第一个商品）
+          if (tempList.length > 0) {
+            // 第一个商品的热度值就是最高值（因为后端已排序）
+            maxHeatInList = tempList[0].heatScore || 0;
+            // 为了安全，也检查一下是否真的是最高值
+            const calculatedMax = Math.max(...tempList.map(item => item.heatScore || 0));
+            maxHeatInList = Math.max(maxHeatInList, calculatedMax);
+          }
+        }
+        // 如果是分页加载（currentPage > 1），使用已保存的最高值，因为第一页的第一个商品就是最高的
+        
+        // 如果还是没有找到最高值，使用默认值避免除零错误
+        if (maxHeatInList <= 0 && tempList.length > 0) {
+          maxHeatInList = Math.max(...tempList.map(item => item.heatScore || 0));
+        }
+        
+        // 第三步：使用动态上限值计算每个商品的进度条
+        const processedList = tempList.map((item) => {
+          // 计算热度进度（使用动态上限值）
+          item.heatProgress = this.calculateHeatProgress(item.heatScore, maxHeatInList);
+          return item;
+        });
+        
+        // 如果是刷新，需要重新计算所有已加载商品的进度条
+        // 如果是分页加载，需要重新计算所有商品的进度条（使用保存的最高值）
+        let newList = [];
+        if (isRefresh) {
+          newList = processedList;
+        } else {
+          // 分页加载：需要重新计算所有商品的进度条（使用保存的最高值）
+          const currentList = this.data.goodsList.map((item) => {
+            item.heatProgress = this.calculateHeatProgress(item.heatScore, maxHeatInList);
+            return item;
+          });
+          newList = [...currentList, ...processedList];
+        }
         
         this.setData({
           goodsList: newList,
           total,
           page: currentPage + 1,
           hasMore: newList.length < total,
+          maxHeatInList: maxHeatInList,  // 保存最高热度值，用于后续分页加载
           loading: false
         });
       } else {
