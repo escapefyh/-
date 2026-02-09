@@ -190,6 +190,23 @@ router.get('/detail', async (req, res) => {
             }
         }
 
+        // 记录浏览历史（用于流量与热度分析）
+        try {
+            const { v4: uuidv4 } = await import('uuid');
+            const browseId = uuidv4();
+            // 小程序目前没有传 user_id，这里兼容处理：如果没有就记为 'anonymous'
+            const userId = req.query.user_id || 'anonymous';
+
+            await BrowseHistory.create({
+                browse_id: browseId,
+                user_id: userId,
+                goods_id: goods_id,
+                create_time: Date.now()
+            });
+        } catch (e) {
+            console.warn('记录浏览历史失败:', e);
+        }
+
         // 返回商品详情和卖家信息
         res.json({
             msg: "success",

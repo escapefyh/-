@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods } = require('../db');
+const { User, Goods, SearchKeyword } = require('../db');
 
 // 处理图片URL，确保返回完整的OSS URL
 const processImageUrls = (images) => {
@@ -60,6 +60,24 @@ router.get('/search', async (req, res) => {
 
         // 2. 搜索商品（对商品描述进行模糊匹配）
         const searchKeyword = keyword.trim();
+        
+        // 记录搜索关键词（异步执行，不阻塞搜索）
+        try {
+            const { v4: uuidv4 } = await import('uuid');
+            const searchId = uuidv4();
+            const user_id = req.query.user_id || req.body?.user_id || null; // 可选，小程序端可能传递
+            SearchKeyword.create({
+                search_id: searchId,
+                user_id: user_id,
+                keyword: searchKeyword,
+                create_time: Date.now()
+            }).catch(err => {
+                console.warn('记录搜索关键词失败:', err);
+            });
+        } catch (e) {
+            console.warn('记录搜索关键词失败（uuid 导入异常）:', e);
+        }
+        
         const goodsList = await Goods.find({
             description: { $regex: searchKeyword, $options: 'i' } // 不区分大小写的模糊匹配
         })

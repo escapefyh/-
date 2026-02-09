@@ -40,6 +40,11 @@ const walletRoutes = require('./routes/wallet');
 const followRoutes = require('./routes/follow');
 const browseRoutes = require('./routes/browse');
 const commentRoutes = require('./routes/comment');
+const adminAuthRoutes = require('./routes/admin/auth');
+const adminUserRoutes = require('./routes/admin/user');
+const adminImageProxyRoutes = require('./routes/admin/imageProxy');
+const analyticsTrafficRoutes = require('./routes/analytics/traffic');
+const analyticsTransactionRoutes = require('./routes/analytics/transaction');
 
 // 注册路由
 app.use('/', registerRoutes);         // /register
@@ -63,6 +68,11 @@ app.use('/wallet', walletRoutes);     // /wallet/balance, /wallet/recharge
 app.use('/follow', followRoutes);     // /follow/count
 app.use('/browse', browseRoutes);     // /browse/count
 app.use('/comment', commentRoutes);   // /comment/list, /comment/create
+app.use('/admin', adminAuthRoutes);   // /admin/login, /admin/register
+app.use('/admin/user', adminUserRoutes); // /admin/user/list, /admin/user/blacklist, /admin/user/detail/:user_id, /admin/user/orders/:user_id
+app.use('/admin/image', adminImageProxyRoutes); // /admin/image/proxy?url=图片URL
+app.use('/analytics/traffic', analyticsTrafficRoutes); // /analytics/traffic/hot-keywords, /analytics/traffic/visit-trend, /analytics/traffic/active-hours
+app.use('/analytics/transaction', analyticsTransactionRoutes); // /analytics/transaction/trend, /analytics/transaction/category-share
 
 // 启动定时任务：处理过期的拼团组（每分钟执行一次）
 const processExpiredGroupBuys = require('./cron/groupBuyExpire');

@@ -44,6 +44,11 @@ const UserSchema = new mongoose.Schema({
     },
     create_time:{
         type:Number
+    },
+    // 是否被拉黑（0-否，1-是）
+    is_blacklisted: {
+        type: Number,
+        default: 0
     }
 })
 //第一个User是在操作数据库时用的名称，第二个User就是我在数据库中创建的表的名字
@@ -822,6 +827,36 @@ BrowseHistorySchema.index({ user_id: 1, goods_id: 1 }); // 便于查询某个用
 
 const BrowseHistory = mongoose.model("BrowseHistory", BrowseHistorySchema);
 
+// 搜索关键词记录表（用于热搜词云图）
+const SearchKeywordSchema = new mongoose.Schema({
+    // 搜索记录ID
+    search_id: {
+        type: String,
+        required: true
+    },
+    // 用户ID（可选，匿名搜索可能为空）
+    user_id: {
+        type: String,
+        default: null
+    },
+    // 搜索关键词
+    keyword: {
+        type: String,
+        required: true
+    },
+    // 搜索时间
+    create_time: {
+        type: Number,
+        required: true
+    }
+});
+
+// 添加索引，便于统计和按时间查询
+SearchKeywordSchema.index({ keyword: 1, create_time: -1 });
+SearchKeywordSchema.index({ create_time: -1 });
+
+const SearchKeyword = mongoose.model("SearchKeyword", SearchKeywordSchema);
+
 // 拼团组表（group_buy）
 const GroupBuySchema = new mongoose.Schema({
     // 拼团组ID（主键）
@@ -875,8 +910,61 @@ GroupBuySchema.index({ group_id: 1 }); // 拼团组ID索引
 
 const GroupBuy = mongoose.model("GroupBuy", GroupBuySchema);
 
+// 管理员表（用于网页端后台管理系统）
+const AdminUserSchema = new mongoose.Schema({
+    // 管理员唯一id
+    admin_id: {
+        type: String,
+        required: true
+    },
+    // 账号
+    account: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 密码
+    password: {
+        type: String,
+        required: true
+    },
+    // 姓名
+    name: {
+        type: String,
+        required: true
+    },
+    // 手机号
+    phone: {
+        type: String,
+        required: true
+    },
+    // 角色（admin-管理员, super_admin-超级管理员）
+    role: {
+        type: String,
+        enum: ['admin', 'super_admin'],
+        default: 'admin'
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 更新时间
+    update_time: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引
+AdminUserSchema.index({ account: 1 }, { unique: true }); // 账号唯一索引
+AdminUserSchema.index({ phone: 1 }); // 手机号索引
+
+const AdminUser = mongoose.model("AdminUser", AdminUserSchema);
+
 module.exports = {
     User,
+    AdminUser,
     Goods,
     GroupBuyOrder,
     GroupBuyParticipant,
@@ -892,5 +980,6 @@ module.exports = {
     PaymentRecord,
     Follow,
     BrowseHistory,
-    GroupBuy
+    GroupBuy,
+    SearchKeyword
 };
