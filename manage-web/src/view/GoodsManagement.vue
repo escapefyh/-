@@ -151,8 +151,8 @@
 
       <div class="pagination">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          :current-page="currentPage"
+          :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
@@ -280,7 +280,7 @@ const fetchHeatRanking = async () => {
   }
 }
 
-// 获取商品列表
+// 获取商品列表（热度控制页面，默认只看在售）
 const fetchGoodsList = async () => {
   loading.value = true
   try {

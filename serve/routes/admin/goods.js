@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Goods } = require('../../db');
+const { Goods, SystemAnnouncement, User, AdminUser } = require('../../db');
 
 // 处理图片URL，确保返回完整的OSS URL
 const processImageUrls = (images) => {
@@ -118,11 +118,11 @@ router.post('/setHeatBonus', async (req, res) => {
     }
 });
 
-// 管理员获取商品列表接口（用于商品管理）
+// 管理员获取商品列表接口（用于商品管理 & 热度控制）
 // GET /admin/goods/list
 router.get('/list', async (req, res) => {
     try {
-        const { page = 1, pageSize = 20, keyword = '' } = req.query;
+        const { page = 1, pageSize = 20, keyword = '', status } = req.query;
 
         // 1. 参数验证
         const pageNum = parseInt(page) || 1;
@@ -148,8 +148,20 @@ router.get('/list', async (req, res) => {
             query.description = { $regex: keyword.trim(), $options: 'i' };
         }
 
+        // 根据 status 进行状态过滤：
+        // - 未传 / 为空：默认只查在售（兼容“热度控制”页面）
+        // - status = 'on_sale'：只查在售
+        // - status = 'off_shelf'：只查已下架
+        // - status = 'all'：不过滤状态，查全部
+        if (status && status !== 'all') {
+            query.status = status;
+        } else if (!status) {
+            query.status = 'on_sale';
+        }
+
         // 3. 查询商品列表
         const skip = (pageNum - 1) * pageSizeNum;
+
         const goodsList = await Goods.find(query)
             .sort({ create_time: -1 })
             .skip(skip)
@@ -171,6 +183,7 @@ router.get('/list', async (req, res) => {
                 group_buy_count: goods.group_buy_count || null,
                 create_time: goods.create_time,
                 admin_heat_bonus: goods.admin_heat_bonus || 0,
+                status: goods.status || 'on_sale',
                 images: processedImages
             };
         });
@@ -230,6 +243,7 @@ router.get('/detail', async (req, res) => {
                 group_buy_count: goods.group_buy_count || null,
                 create_time: goods.create_time,
                 admin_heat_bonus: goods.admin_heat_bonus || 0,
+                status: goods.status || 'on_sale',
                 images: processedImages
             }
         });
@@ -239,6 +253,66 @@ router.get('/detail', async (req, res) => {
             msg: "error",
             error: "获取失败"
         });
+    }
+});
+
+// 管理员下架商品
+// POST /admin/goods/offShelf
+router.post('/offShelf', async (req, res) => {
+    try {
+        const { goods_id, admin_id, reason } = req.body;
+        if (!goods_id) {
+            return res.status(200).json({ msg: 'error', error: '商品ID不能为空' });
+        }
+
+        const goods = await Goods.findOne({ goods_id }).lean();
+        if (!goods) {
+            return res.status(200).json({ msg: 'error', error: '商品不存在' });
+        }
+
+        // 需求更新：管理员下架后，直接删除数据库中的商品记录，
+        // 避免首页等列表继续展示该商品。
+        await Goods.deleteOne({ goods_id });
+
+        // 查询发布者用户
+        const user = await User.findOne({ user_id: String(goods.user_id) }).lean();
+
+        // 查管理员信息（可选）
+        let adminName = '';
+        if (admin_id) {
+            const admin = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
+            adminName = admin?.name || '';
+        }
+
+        // 给该用户发送一条系统公告（仅该用户可见）
+        if (user) {
+            const now = Date.now();
+            const title = '商品违规下架通知';
+            const desc = goods.description || '';
+            const reasonText = reason && reason.trim()
+                ? `原因：${reason.trim()}`
+                : '原因：涉嫌违规，请联系管理员了解详情。';
+            const content =
+`您发布的商品已被平台管理员下架：
+商品描述：${desc}
+${reasonText}`;
+
+            await SystemAnnouncement.create({
+                announcement_id: 'off_shelf_' + goods.goods_id,
+                title,
+                content,
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                target_user_id: String(goods.user_id),
+                create_time: now,
+                update_time: now
+            });
+        }
+
+        return res.json({ msg: 'success', data: { goods_id, message: '下架成功' } });
+    } catch (error) {
+        console.log('下架商品失败:', error);
+        return res.status(200).json({ msg: 'error', error: '下架失败' });
     }
 });
 

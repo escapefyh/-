@@ -49,6 +49,11 @@ const router = createRouter({
           component: () => import('../view/GoodsManagement.vue')
         },
         {
+          path: '/product-management',
+          name: 'ProductManagement',
+          component: () => import('../view/ProductManagement.vue')
+        },
+        {
           path: '/announcement-management',
           name: 'AnnouncementManagement',
           component: () => import('../view/AnnouncementManagement.vue')

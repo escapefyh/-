@@ -20,6 +20,10 @@
           <el-icon><Goods /></el-icon>
           <template #title>热度控制</template>
         </el-menu-item>
+        <el-menu-item index="/product-management">
+          <el-icon><Goods /></el-icon>
+          <template #title>商品管理</template>
+        </el-menu-item>
         <el-menu-item index="/announcement-management">
           <el-icon><Bell /></el-icon>
           <template #title>系统公告</template>

@@ -129,10 +129,18 @@ const GoodsSchema = new mongoose.Schema({
     admin_heat_bonus: {
         type: Number,
         default: 0
+    },
+    // 商品状态：on_sale(在售)、off_shelf(已下架)
+    status: {
+        type: String,
+        enum: ['on_sale', 'off_shelf'],
+        default: 'on_sale'
     }
 });
 
 const Goods = mongoose.model("Goods", GoodsSchema);
+GoodsSchema.index({ user_id: 1, create_time: -1 });
+GoodsSchema.index({ status: 1, create_time: -1 });
 
 // 拼团订单表
 const GroupBuyOrderSchema = new mongoose.Schema({

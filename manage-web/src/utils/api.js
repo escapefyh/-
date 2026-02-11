@@ -103,6 +103,11 @@ export const adminGoodsAPI = {
   // 获取热度榜单
   getHotList(params) {
     return api.get('/goods/hot', { params });
+  },
+
+  // 下架商品
+  offShelf(data) {
+    return api.post('/admin/goods/offShelf', data);
   }
 };
 
