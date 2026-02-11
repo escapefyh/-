@@ -16,6 +16,10 @@
           <el-icon><User /></el-icon>
           <template #title>用户管理</template>
         </el-menu-item>
+        <el-menu-item index="/goods-management">
+          <el-icon><Goods /></el-icon>
+          <template #title>热度控制</template>
+        </el-menu-item>
         <el-sub-menu index="/analytics">
           <template #title>
             <el-icon><DataAnalysis /></el-icon>
@@ -28,12 +32,6 @@
           <el-menu-item index="/analytics/transaction">
             <el-icon><TrendCharts /></el-icon>
             <template #title>交易与拼单分析</template>
-          </el-menu-item>
-          <el-menu-item index="/analytics/user-profile" disabled>
-            <template #title>用户画像分析</template>
-          </el-menu-item>
-          <el-menu-item index="/analytics/goods-ranking" disabled>
-            <template #title>商品排行榜</template>
           </el-menu-item>
         </el-sub-menu>
       </el-menu>
@@ -76,7 +74,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts } from '@element-plus/icons-vue'
+import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()

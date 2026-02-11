@@ -124,6 +124,11 @@ const GoodsSchema = new mongoose.Schema({
     update_time: {
         type: Number,
         default: null
+    },
+    // 管理员给的热度加分（默认0）
+    admin_heat_bonus: {
+        type: Number,
+        default: 0
     }
 });
 

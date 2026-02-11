@@ -83,6 +83,29 @@ export const getImageProxyUrl = (imageUrl) => {
   return imageUrl;
 };
 
+// 管理员商品管理相关 API
+export const adminGoodsAPI = {
+  // 获取商品列表
+  getGoodsList(params) {
+    return api.get('/admin/goods/list', { params });
+  },
+  
+  // 获取商品详情
+  getGoodsDetail(goods_id) {
+    return api.get('/admin/goods/detail', { params: { goods_id } });
+  },
+  
+  // 设置商品热度加分
+  setHeatBonus(goods_id, admin_heat_bonus) {
+    return api.post('/admin/goods/setHeatBonus', { goods_id, admin_heat_bonus });
+  },
+  
+  // 获取热度榜单
+  getHotList(params) {
+    return api.get('/goods/hot', { params });
+  }
+};
+
 // 数据分析相关 API
 export const analyticsAPI = {
   // 获取热搜关键词（词云图）

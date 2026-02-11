@@ -42,6 +42,11 @@ const router = createRouter({
           path: '/analytics/transaction',
           name: 'TransactionAnalysis',
           component: () => import('../view/analytics/TransactionAnalysis.vue')
+        },
+        {
+          path: '/goods-management',
+          name: 'GoodsManagement',
+          component: () => import('../view/GoodsManagement.vue')
         }
       ]
     }

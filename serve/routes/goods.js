@@ -998,9 +998,8 @@ router.get('/hot', async (req, res) => {
             };
         });
 
-        // 8. 计算当前时间（用于时效加成计算）
+        // 8. 计算当前时间（用于计算发布时间小时数）
         const currentTime = new Date().getTime();
-        const twentyFourHoursAgo = currentTime - 24 * 60 * 60 * 1000;
 
         // 9. 计算每个商品的热度值并组装数据
         const goodsWithHeat = allGoods.map(goods => {
@@ -1011,25 +1010,38 @@ router.get('/hot', async (req, res) => {
             const groupBuyCount = goods.group_buy_count || 0;
             const totalSales = sales + groupBuyCount;
 
-            // 生成基础分（100-500之间的固定值，基于商品ID的哈希值）
-            // 使用简单的哈希函数确保同一商品每次得到相同的基础分
-            let hash = 0;
-            for (let i = 0; i < goods.goods_id.length; i++) {
-                const char = goods.goods_id.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // Convert to 32bit integer
-            }
-            const baseScore = Math.abs(hash % 400) + 100; // 100-500之间
+            // 基础分：固定2000
+            const baseScore = 2000;
 
-            // 计算时效加成（24小时内发布的新品额外给200分）
-            let freshnessBonus = 0;
-            if (goods.create_time && goods.create_time >= twentyFourHoursAgo) {
-                freshnessBonus = 200;
+            // 计算基础热度（不含时间扣分和管理员加分）
+            // 基础热度 = 基础分2000 + (浏览量 × 1) + (收藏量 × 10) + (销量/拼单 × 50)
+            const baseHeat = baseScore + (views * 1) + (favorites * 10) + (totalSales * 50);
+
+            // 计算发布时间总小时数（用于扣分）
+            let hoursSinceCreation = 0;
+            if (goods.create_time) {
+                const diffTime = currentTime - goods.create_time;
+                hoursSinceCreation = Math.floor(diffTime / (1000 * 60 * 60));
             }
 
-            // 计算热度值
-            // 热度值 = 基础分 + (浏览量 × 1) + (收藏量 × 10) + (销量/拼单 × 50) + 时效加成
-            const heatScore = baseScore + (views * 1) + (favorites * 10) + (totalSales * 50) + freshnessBonus;
+            // 计算时间扣分（每小时扣10分）
+            const timeDeduction = hoursSinceCreation * 10;
+
+            // 限制时间扣分：最多只能扣到500，即扣分不能超过（基础热度 - 500）
+            // 这样确保即使时间很长，热度值也不会低于500
+            const maxAllowedDeduction = Math.max(0, baseHeat - 500);
+            const actualTimeDeduction = Math.min(timeDeduction, maxAllowedDeduction);
+
+            // 管理员给的热度加分（默认0）
+            const adminBonus = goods.admin_heat_bonus || 0;
+
+            // 计算最终热度值
+            // 热度值 = 基础热度 - 限制后的时间扣分 + 管理员加分
+            // 由于时间扣分已被限制，最终结果不会低于500（除非管理员加分是负数且绝对值很大）
+            let heatScore = baseHeat - actualTimeDeduction + adminBonus;
+
+            // 最终保护：确保热度值不低于500（防止管理员加分是负数导致低于500）
+            heatScore = Math.max(500, heatScore);
 
             // 计算库存（如果开启了规格，从规格中计算；否则返回 null）
             let stock = null;
@@ -1050,8 +1062,17 @@ router.get('/hot', async (req, res) => {
             };
         });
 
-        // 10. 按热度值降序排序
-        goodsWithHeat.sort((a, b) => b.heatScore - a.heatScore);
+        // 10. 按热度值降序排序，如果热度值相同，则按创建时间降序排序（新发布的商品在前）
+        goodsWithHeat.sort((a, b) => {
+            // 首先按热度值降序排序
+            if (b.heatScore !== a.heatScore) {
+                return b.heatScore - a.heatScore;
+            }
+            // 如果热度值相同，按创建时间降序排序（新商品在前，即时间戳大的在前）
+            const timeA = a.goods.create_time || 0;
+            const timeB = b.goods.create_time || 0;
+            return timeB - timeA;
+        });
 
         // 11. 分页处理
         const skip = (pageNum - 1) * pageSizeNum;
@@ -1084,7 +1105,9 @@ router.get('/hot', async (req, res) => {
                 sales_count: goods.sales_count || 0,
                 sales: goods.sales_count || 0,
                 group_buy_count: goods.group_buy_count || null,
-                base_score: item.baseScore
+                base_score: item.baseScore,
+                heatScore: item.heatScore,
+                admin_heat_bonus: goods.admin_heat_bonus || 0
             };
         });
 

@@ -85,7 +85,7 @@
               <view class="heat-bar-bg">
                 <view class="heat-bar-fill" style="width: {{item.heatProgress}}%"></view>
               </view>
-              <text class="heat-text">🔥 热度 {{item.heatScore}}</text>
+              <text class="heat-text">🔥 热度 {{item.heatScoreDisplay}}</text>
             </view>
           </view>
           

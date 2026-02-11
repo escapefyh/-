@@ -147,12 +147,12 @@ Page({
   },
 
   /**
-   * 计算商品热度值
-   * 热度值 = 基础分 + 浏览量×1 + 收藏量×10 + 销量/拼单×50 + 时效加成
+   * 计算商品热度值（备用函数，后端应该总是返回heatScore）
+   * 热度值 = 基础分2000 + 浏览量×1 + 收藏量×10 + 销量/拼单×50 - 发布时间小时数×10 + 管理员加分
    */
   calculateHeatScore(item) {
-    // 基础分：100-500随机（如果后端没有提供，前端生成一个固定值）
-    const baseScore = item.base_score || Math.floor(Math.random() * 400) + 100;
+    // 基础分：固定2000
+    const baseScore = 2000;
     
     // 浏览量
     const views = item.views || 0;
@@ -165,22 +165,46 @@ Page({
     const groupBuyCount = item.group_buy_count || 0;
     const totalSales = sales + groupBuyCount;
     
-    // 时效加成：24小时内发布的新品额外+200分
-    let freshnessBonus = 0;
+    // 计算发布时间总小时数（用于扣分）
+    let hoursSinceCreation = 0;
     if (item.create_time) {
       const createTime = new Date(item.create_time);
       const now = new Date();
       const diffTime = now - createTime;
-      const diffHours = diffTime / (1000 * 60 * 60);
-      if (diffHours <= 24) {
-        freshnessBonus = 200;
-      }
+      hoursSinceCreation = Math.floor(diffTime / (1000 * 60 * 60));
     }
     
+    // 管理员给的热度加分（默认0）
+    const adminBonus = item.admin_heat_bonus || 0;
+    
     // 计算总热度值
-    const heatScore = baseScore + (views * 1) + (favorites * 10) + (totalSales * 50) + freshnessBonus;
+    const heatScore = baseScore + (views * 1) + (favorites * 10) + (totalSales * 50) - (hoursSinceCreation * 10) + adminBonus;
     
     return Math.floor(heatScore);
+  },
+
+  /**
+   * 格式化热度值显示
+   * 如果热度超过10000，显示为"1w+"
+   * @param {number} heatScore - 热度值
+   * @returns {string} 格式化后的热度值字符串
+   */
+  formatHeatScore(heatScore) {
+    // 处理undefined、null或非数字的情况
+    if (heatScore === undefined || heatScore === null || isNaN(heatScore)) {
+      return '0';
+    }
+    
+    // 转换为数字
+    const score = Number(heatScore);
+    
+    // 如果热度超过10000，显示为"1w+"
+    if (score >= 10000) {
+      return '1w+';
+    }
+    
+    // 返回格式化后的数值（保留整数）
+    return Math.floor(score).toString();
   },
 
   /**
@@ -190,8 +214,13 @@ Page({
    * @param {number} maxHeatInList - 当前列表中的最高热度值（第一名的热度值）
    */
   calculateHeatProgress(heatScore, maxHeatInList) {
+    // 如果热度值小于等于0，进度条显示为0
+    if (heatScore <= 0) {
+      return 0;
+    }
+    
+    // 如果最高热度值小于等于0，使用默认上限10000
     if (!maxHeatInList || maxHeatInList <= 0) {
-      // 如果没有最高值，使用默认值
       return Math.min(100, (heatScore / 10000) * 100);
     }
     
@@ -259,8 +288,13 @@ Page({
             item.seller = {};
           }
           
-          // 计算热度值
-          item.heatScore = this.calculateHeatScore(item);
+          // 使用后端返回的热度值，如果没有则使用前端计算（兼容性处理）
+          if (item.heatScore === undefined || item.heatScore === null) {
+            item.heatScore = this.calculateHeatScore(item);
+          }
+          
+          // 格式化热度值显示（超过10000显示为1w+）
+          item.heatScoreDisplay = this.formatHeatScore(item.heatScore);
           
           // 排名（从1开始）
           item.rank = index + 1 + (currentPage - 1) * this.data.pageSize;
@@ -283,18 +317,28 @@ Page({
         if (isRefresh || currentPage === 1) {
           // 刷新或第一页：使用当前页的最高热度值（应该是第一个商品）
           if (tempList.length > 0) {
-            // 第一个商品的热度值就是最高值（因为后端已排序）
-            maxHeatInList = tempList[0].heatScore || 0;
-            // 为了安全，也检查一下是否真的是最高值
-            const calculatedMax = Math.max(...tempList.map(item => item.heatScore || 0));
-            maxHeatInList = Math.max(maxHeatInList, calculatedMax);
+            // 过滤出所有有效的热度值（大于0的）
+            const validHeatScores = tempList
+              .map(item => item.heatScore)
+              .filter(score => score !== undefined && score !== null && !isNaN(score) && score > 0);
+            
+            if (validHeatScores.length > 0) {
+              // 第一个商品的热度值就是最高值（因为后端已排序）
+              maxHeatInList = Math.max(tempList[0].heatScore || 0, ...validHeatScores);
+            } else {
+              // 如果所有热度值都 <= 0，使用默认值
+              maxHeatInList = 0;
+            }
           }
         }
         // 如果是分页加载（currentPage > 1），使用已保存的最高值，因为第一页的第一个商品就是最高的
         
-        // 如果还是没有找到最高值，使用默认值避免除零错误
+        // 如果还是没有找到有效的最高值（>0），使用默认值避免除零错误
         if (maxHeatInList <= 0 && tempList.length > 0) {
-          maxHeatInList = Math.max(...tempList.map(item => item.heatScore || 0));
+          const validHeatScores = tempList
+            .map(item => item.heatScore)
+            .filter(score => score !== undefined && score !== null && !isNaN(score) && score > 0);
+          maxHeatInList = validHeatScores.length > 0 ? Math.max(...validHeatScores) : 0;
         }
         
         // 第三步：使用动态上限值计算每个商品的进度条
@@ -313,6 +357,7 @@ Page({
           // 分页加载：需要重新计算所有商品的进度条（使用保存的最高值）
           const currentList = this.data.goodsList.map((item) => {
             item.heatProgress = this.calculateHeatProgress(item.heatScore, maxHeatInList);
+            item.heatScoreDisplay = this.formatHeatScore(item.heatScore);
             return item;
           });
           newList = [...currentList, ...processedList];
