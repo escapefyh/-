@@ -17,6 +17,11 @@
       <view class="menu-text">清除缓存</view>
       <view class="menu-arrow">></view>
     </view>
+    <view class="menu-item" bind:tap="goToFeedback">
+      <view class="menu-icon">💬</view>
+      <view class="menu-text">问题反馈</view>
+      <view class="menu-arrow">></view>
+    </view>
   </view>
 
   <!-- 其他功能区域 -->

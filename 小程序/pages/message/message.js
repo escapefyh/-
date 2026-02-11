@@ -8,7 +8,8 @@ Page({
    */
   data: {
     chatList: [],      // 聊天列表
-    loading: false
+    loading: false,
+    announcementUnreadCount: 0  // 系统公告未读数量
   },
 
   /**

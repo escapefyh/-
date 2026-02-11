@@ -57,6 +57,11 @@ const router = createRouter({
           path: '/sensitive-word-management',
           name: 'SensitiveWordManagement',
           component: () => import('../view/SensitiveWordManagement.vue')
+        },
+        {
+          path: '/feedback-management',
+          name: 'FeedbackManagement',
+          component: () => import('../view/FeedbackManagement.vue')
         }
       ]
     }

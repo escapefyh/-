@@ -44,6 +44,12 @@
   gap: 6rpx;
 }
 
+.entry-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
 .entry-title {
   font-size: 32rpx;
   font-weight: 600;
@@ -58,6 +64,21 @@
 .entry-arrow {
   color: #bbb;
   font-size: 30rpx;
+}
+
+.announcement-badge {
+  min-width: 40rpx;
+  padding: 4rpx 10rpx;
+  border-radius: 20rpx;
+  background-color: #ff4d4f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.announcement-badge text {
+  color: #fff;
+  font-size: 22rpx;
 }
 
 .loading-container,

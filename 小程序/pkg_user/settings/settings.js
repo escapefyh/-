@@ -27,6 +27,15 @@ Page({
   },
 
   /**
+   * 跳转到问题反馈页面
+   */
+  goToFeedback() {
+    wx.navigateTo({
+      url: '/pkg_user/feedback/feedback'
+    });
+  },
+
+  /**
    * 清除缓存
    */
   clearCache() {

@@ -147,6 +147,24 @@ export const adminSensitiveWordAPI = {
   }
 };
 
+// 管理员问题反馈相关 API
+export const adminFeedbackAPI = {
+  // 获取反馈列表
+  getFeedbackList(params) {
+    return api.get('/admin/feedback/list', { params });
+  },
+
+  // 获取反馈详情
+  getFeedbackDetail(feedback_id) {
+    return api.get('/admin/feedback/detail', { params: { feedback_id } });
+  },
+
+  // 回复反馈
+  replyFeedback(data) {
+    return api.post('/admin/feedback/reply', data);
+  }
+};
+
 // 数据分析相关 API
 export const analyticsAPI = {
   // 获取热搜关键词（词云图）

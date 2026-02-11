@@ -31,8 +31,9 @@ Page({
     this.setData({ loading: true })
 
     try {
+      const user_id = wx.getStorageSync('user_id') || ''
       const res = await ajax(
-        `/announcement/list?page=${nextPage}&pageSize=${this.data.pageSize}`,
+        `/announcement/list?page=${nextPage}&pageSize=${this.data.pageSize}&user_id=${user_id}`,
         'GET',
         {}
       )
@@ -48,6 +49,16 @@ Page({
           hasMore: merged.length < total,
           loading: false
         })
+
+        // 首次刷新时，把最新一条公告的时间记为“已读”，用于未读角标统计
+        if (isRefresh) {
+          const latest = newList.length ? (newList[0].create_time || 0) : 0
+          const key = `announcement_last_read_time_${user_id}`
+          const prev = wx.getStorageSync(key) || 0
+          if (latest > prev) {
+            wx.setStorageSync(key, latest)
+          }
+        }
       } else {
         wx.showToast({ title: res?.error || '加载失败', icon: 'none' })
         this.setData({ loading: false })

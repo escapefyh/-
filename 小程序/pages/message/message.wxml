@@ -9,7 +9,12 @@
         <text class="entry-subtitle">查看管理员发布的公告</text>
       </view>
     </view>
-    <text class="entry-arrow">></text>
+    <view class="entry-right">
+      <view wx:if="{{announcementUnreadCount > 0}}" class="announcement-badge">
+        <text>{{announcementUnreadCount > 99 ? '99+' : announcementUnreadCount}}</text>
+      </view>
+      <text class="entry-arrow">></text>
+    </view>
   </view>
 
   <!-- 加载中状态 -->

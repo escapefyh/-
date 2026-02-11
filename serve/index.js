@@ -46,9 +46,11 @@ const adminImageProxyRoutes = require('./routes/admin/imageProxy');
 const adminGoodsRoutes = require('./routes/admin/goods');
 const adminAnnouncementRoutes = require('./routes/admin/announcement');
 const adminSensitiveWordRoutes = require('./routes/admin/sensitiveWord');
+const adminFeedbackRoutes = require('./routes/admin/feedback');
 const analyticsTrafficRoutes = require('./routes/analytics/traffic');
 const analyticsTransactionRoutes = require('./routes/analytics/transaction');
 const announcementRoutes = require('./routes/announcement');
+const feedbackRoutes = require('./routes/feedback');
 
 // 注册路由
 app.use('/', registerRoutes);         // /register
@@ -78,9 +80,11 @@ app.use('/admin/image', adminImageProxyRoutes); // /admin/image/proxy?url=图片
 app.use('/admin/goods', adminGoodsRoutes); // /admin/goods/list, /admin/goods/detail, /admin/goods/setHeatBonus
 app.use('/admin/announcement', adminAnnouncementRoutes); // /admin/announcement/create, /admin/announcement/list, /admin/announcement/detail, /admin/announcement/delete
 app.use('/admin/sensitive-word', adminSensitiveWordRoutes); // /admin/sensitive-word/create, /admin/sensitive-word/list, /admin/sensitive-word/delete
+app.use('/admin/feedback', adminFeedbackRoutes); // /admin/feedback/list, /admin/feedback/detail, /admin/feedback/reply
 app.use('/analytics/traffic', analyticsTrafficRoutes); // /analytics/traffic/hot-keywords, /analytics/traffic/visit-trend, /analytics/traffic/active-hours
 app.use('/analytics/transaction', analyticsTransactionRoutes); // /analytics/transaction/trend, /analytics/transaction/category-share
 app.use('/announcement', announcementRoutes); // /announcement/list, /announcement/detail
+app.use('/feedback', feedbackRoutes); // /feedback/create
 
 // 启动定时任务：处理过期的拼团组（每分钟执行一次）
 const processExpiredGroupBuys = require('./cron/groupBuyExpire');

@@ -23,7 +23,8 @@
         "collect/collect",
         "wallet/wallet",
         "follow/follow",
-        "browse/browse"
+        "browse/browse",
+        "feedback/feedback"
       ]
     },
     {

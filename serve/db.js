@@ -967,7 +967,7 @@ AdminUserSchema.index({ phone: 1 }); // 手机号索引
 
 const AdminUser = mongoose.model("AdminUser", AdminUserSchema);
 
-// 系统公告表（管理员发布，所有用户可见）
+// 系统公告表（管理员发布，所有用户可见；也可针对单个用户）
 const SystemAnnouncementSchema = new mongoose.Schema({
     // 公告唯一id
     announcement_id: {
@@ -991,6 +991,11 @@ const SystemAnnouncementSchema = new mongoose.Schema({
         default: ''
     },
     admin_name: {
+        type: String,
+        default: ''
+    },
+    // 目标用户ID（为空表示全体用户可见；有值表示仅该用户可见）
+    target_user_id: {
         type: String,
         default: ''
     },
@@ -1040,6 +1045,49 @@ SensitiveWordSchema.index({ word: 1 });
 
 const SensitiveWord = mongoose.model("SensitiveWord", SensitiveWordSchema);
 
+// 问题反馈表
+const FeedbackSchema = new mongoose.Schema({
+    user_id: {
+        type: String,
+        required: true
+    },
+    content: {
+        type: String,
+        required: true
+    },
+    images: {
+        type: [String],
+        default: []
+    },
+    // 状态：pending（待处理）、resolved（已解决）
+    status: {
+        type: String,
+        enum: ['pending', 'resolved'],
+        default: 'pending'
+    },
+    admin_reply: {
+        type: String,
+        default: ''
+    },
+    reply_time: {
+        type: Number,
+        default: null
+    },
+    create_time: {
+        type: Number,
+        required: true
+    },
+    update_time: {
+        type: Number,
+        default: null
+    }
+});
+
+FeedbackSchema.index({ user_id: 1, create_time: -1 });
+FeedbackSchema.index({ status: 1, create_time: -1 });
+
+const Feedback = mongoose.model("Feedback", FeedbackSchema);
+
 module.exports = {
     User,
     AdminUser,
@@ -1061,5 +1109,6 @@ module.exports = {
     GroupBuy,
     SearchKeyword,
     SystemAnnouncement,
-    SensitiveWord
+    SensitiveWord,
+    Feedback
 };

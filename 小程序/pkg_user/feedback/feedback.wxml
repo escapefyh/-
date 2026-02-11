@@ -1,0 +1,49 @@
+<view class="page">
+  <view class="section">
+    <view class="section-title">问题描述</view>
+    <textarea
+      class="textarea"
+      placeholder="请尽可能详细地描述您遇到的问题或建议~"
+      maxlength="1000"
+      bindinput="onContentInput"
+      value="{{content}}"
+    />
+    <view class="word-count">{{content.length}} / 1000</view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">相关截图（可选，最多3张）</view>
+    <view class="image-list">
+      <view
+        class="image-item"
+        wx:for="{{images}}"
+        wx:key="*this"
+      >
+        <image
+          class="image"
+          src="{{item}}"
+          mode="aspectFill"
+          bindtap="onPreviewImage"
+          data-index="{{index}}"
+        />
+        <view class="delete" bindtap="onDeleteImage" data-index="{{index}}">×</view>
+      </view>
+      <view
+        wx:if="{{images.length < 3}}"
+        class="image-item add"
+        bindtap="onChooseImage"
+      >
+        <view class="add-icon">+</view>
+        <view class="add-text">添加图片</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom">
+    <button class="submit-btn" bindtap="onSubmit" loading="{{submitting}}">提交反馈</button>
+  </view>
+</view>
+
+
+
+

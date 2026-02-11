@@ -28,6 +28,10 @@
           <el-icon><Edit /></el-icon>
           <template #title>敏感词过滤</template>
         </el-menu-item>
+        <el-menu-item index="/feedback-management">
+          <el-icon><Message /></el-icon>
+          <template #title>问题反馈</template>
+        </el-menu-item>
         <el-sub-menu index="/analytics">
           <template #title>
             <el-icon><DataAnalysis /></el-icon>
@@ -82,7 +86,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell, Edit } from '@element-plus/icons-vue'
+import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell, Edit, Message } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
