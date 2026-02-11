@@ -967,6 +967,50 @@ AdminUserSchema.index({ phone: 1 }); // 手机号索引
 
 const AdminUser = mongoose.model("AdminUser", AdminUserSchema);
 
+// 系统公告表（管理员发布，所有用户可见）
+const SystemAnnouncementSchema = new mongoose.Schema({
+    // 公告唯一id
+    announcement_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 标题
+    title: {
+        type: String,
+        required: true
+    },
+    // 内容（支持长文本）
+    content: {
+        type: String,
+        required: true
+    },
+    // 发布管理员信息（可选）
+    admin_id: {
+        type: String,
+        default: ''
+    },
+    admin_name: {
+        type: String,
+        default: ''
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 更新时间
+    update_time: {
+        type: Number,
+        default: null
+    }
+});
+
+// 添加索引
+SystemAnnouncementSchema.index({ create_time: -1 }); // 便于按时间倒序查询
+
+const SystemAnnouncement = mongoose.model("SystemAnnouncement", SystemAnnouncementSchema);
+
 module.exports = {
     User,
     AdminUser,
@@ -986,5 +1030,6 @@ module.exports = {
     Follow,
     BrowseHistory,
     GroupBuy,
-    SearchKeyword
+    SearchKeyword,
+    SystemAnnouncement
 };

@@ -106,6 +106,29 @@ export const adminGoodsAPI = {
   }
 };
 
+// 管理员系统公告相关 API
+export const adminAnnouncementAPI = {
+  // 发布公告
+  createAnnouncement(data) {
+    return api.post('/admin/announcement/create', data);
+  },
+
+  // 获取公告列表
+  getAnnouncementList(params) {
+    return api.get('/admin/announcement/list', { params });
+  },
+
+  // 获取公告详情
+  getAnnouncementDetail(announcement_id) {
+    return api.get('/admin/announcement/detail', { params: { announcement_id } });
+  },
+
+  // 删除公告
+  deleteAnnouncement(announcement_id) {
+    return api.post('/admin/announcement/delete', { announcement_id });
+  }
+};
+
 // 数据分析相关 API
 export const analyticsAPI = {
   // 获取热搜关键词（词云图）

@@ -1,0 +1,47 @@
+.page {
+  min-height: 100vh;
+  background: #fff;
+  padding: 24rpx;
+}
+
+.loading,
+.empty {
+  height: 60vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.4;
+}
+
+.meta {
+  margin-top: 12rpx;
+  display: flex;
+  gap: 18rpx;
+  flex-wrap: wrap;
+  color: #999;
+  font-size: 24rpx;
+}
+
+.meta-time {
+  color: #999;
+}
+
+.body {
+  margin-top: 24rpx;
+  font-size: 30rpx;
+  color: #333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+
+

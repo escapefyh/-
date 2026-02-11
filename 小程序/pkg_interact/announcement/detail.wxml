@@ -1,0 +1,21 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+
+  <view wx:elif="{{!loading && !detail}}" class="empty">
+    <text>公告不存在或已删除</text>
+  </view>
+
+  <view wx:else class="content">
+    <view class="title">{{detail.title}}</view>
+    <view class="meta">
+      <text>发布者：{{detail.admin_name || '管理员'}}</text>
+      <text class="meta-time">{{formatTime(detail.create_time)}}</text>
+    </view>
+    <view class="body">
+      <text>{{detail.content}}</text>
+    </view>
+  </view>
+</view>
+
+
+

@@ -216,6 +216,8 @@ router.get('/detail', async (req, res) => {
             });
         }
 
+        const processedImages = processImageUrls(goods.images);
+
         // 返回商品详情
         res.json({
             msg: "success",
@@ -227,7 +229,8 @@ router.get('/detail', async (req, res) => {
                 sales_count: goods.sales_count || 0,
                 group_buy_count: goods.group_buy_count || null,
                 create_time: goods.create_time,
-                admin_heat_bonus: goods.admin_heat_bonus || 0
+                admin_heat_bonus: goods.admin_heat_bonus || 0,
+                images: processedImages
             }
         });
     } catch (error) {
@@ -240,4 +243,5 @@ router.get('/detail', async (req, res) => {
 });
 
 module.exports = router;
+
 

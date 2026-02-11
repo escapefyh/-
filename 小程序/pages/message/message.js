@@ -22,6 +22,15 @@ Page({
   },
 
   /**
+   * 点击系统公告入口
+   */
+  onAnnouncementClick() {
+    wx.navigateTo({
+      url: '/pkg_interact/announcement/list'
+    });
+  },
+
+  /**
    * 生命周期函数--监听页面初次渲染完成
    */
   onReady() {

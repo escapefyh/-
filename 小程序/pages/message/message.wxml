@@ -1,5 +1,17 @@
 <!--pages/message/message.wxml-->
 <view class="message-page">
+  <!-- 系统公告入口（始终显示） -->
+  <view class="system-announcement-entry" bindtap="onAnnouncementClick">
+    <view class="entry-left">
+      <view class="entry-icon">公</view>
+      <view class="entry-text">
+        <text class="entry-title">系统公告</text>
+        <text class="entry-subtitle">查看管理员发布的公告</text>
+      </view>
+    </view>
+    <text class="entry-arrow">></text>
+  </view>
+
   <!-- 加载中状态 -->
   <view wx:if="{{loading}}" class="loading-container">
     <text>加载中...</text>

@@ -20,6 +20,10 @@
           <el-icon><Goods /></el-icon>
           <template #title>热度控制</template>
         </el-menu-item>
+        <el-menu-item index="/announcement-management">
+          <el-icon><Bell /></el-icon>
+          <template #title>系统公告</template>
+        </el-menu-item>
         <el-sub-menu index="/analytics">
           <template #title>
             <el-icon><DataAnalysis /></el-icon>
@@ -74,7 +78,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods } from '@element-plus/icons-vue'
+import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -146,6 +150,50 @@ onMounted(() => {
 .sidebar-menu .el-menu-item.is-active {
   background-color: #409eff;
   color: #fff;
+}
+
+/* Element Plus 菜单深层节点需要用 :deep 才能在 scoped 下生效 */
+:deep(.sidebar-menu) {
+  background-color: #304156;
+}
+
+/* 子菜单标题（数据可视化） */
+:deep(.sidebar-menu .el-sub-menu__title) {
+  color: #d0d7e2;
+  height: 48px;
+  line-height: 48px;
+}
+
+:deep(.sidebar-menu .el-sub-menu__title:hover) {
+  background-color: #263445;
+  color: #409eff;
+}
+
+/* 展开后的子菜单容器背景（避免默认白底/浅底导致“看不清”） */
+:deep(.sidebar-menu .el-menu) {
+  background-color: #2b3a4a;
+}
+
+/* 子菜单项样式 */
+:deep(.sidebar-menu .el-menu .el-menu-item) {
+  color: #c7d1de;
+  height: 44px;
+  line-height: 44px;
+}
+
+:deep(.sidebar-menu .el-menu .el-menu-item:hover) {
+  background-color: #233141;
+  color: #409eff;
+}
+
+:deep(.sidebar-menu .el-menu .el-menu-item.is-active) {
+  background-color: rgba(64, 158, 255, 0.18);
+  color: #fff;
+}
+
+/* 图标跟随文字颜色 */
+:deep(.sidebar-menu .el-icon) {
+  color: inherit;
 }
 
 .header {

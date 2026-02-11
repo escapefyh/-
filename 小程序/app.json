@@ -41,6 +41,8 @@
       "root": "pkg_interact",
       "pages": [
         "chat/chat",
+        "announcement/list",
+        "announcement/detail",
         "about/about",
         "privacy/privacy"
       ]
