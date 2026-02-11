@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { Feedback, SystemAnnouncement, AdminUser } = require('../../db');
+const { Feedback, SystemAnnouncement, AdminUser, OperationLog } = require('../../db');
+
+// 日志ID生成器
+const generateLogId = () => {
+    const random = Math.random().toString(36).slice(2, 8);
+    return `log_${Date.now()}_${random}`;
+};
 
 // 管理员获取反馈列表
 // GET /admin/feedback/list?status=pending|resolved|all
@@ -114,6 +120,20 @@ router.post('/reply', async (req, res) => {
             create_time: now,
             update_time: now
         });
+
+        // 记录“回复反馈”操作日志
+        try {
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'reply_feedback',
+                description: `管理员 ${adminName || admin_id || '未知'} 回复了用户 ${feedback.user_id} 的问题反馈（ID: ${feedback._id.toString()}）`,
+                create_time: now
+            });
+        } catch (logErr) {
+            console.log('记录回复反馈日志失败:', logErr);
+        }
 
         return res.json({
             msg: 'success',

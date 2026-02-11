@@ -50,6 +50,18 @@
             <template #title>交易与拼单分析</template>
           </el-menu-item>
         </el-sub-menu>
+        <el-sub-menu index="/settings">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>设置</span>
+          </template>
+          <el-menu-item index="/settings/password">
+            <template #title>修改密码</template>
+          </el-menu-item>
+          <el-menu-item index="/settings/logs">
+            <template #title>系统操作日志</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
 
@@ -90,7 +102,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell, Edit, Message } from '@element-plus/icons-vue'
+import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell, Edit, Message, Setting } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()

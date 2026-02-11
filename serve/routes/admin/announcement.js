@@ -1,10 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { SystemAnnouncement, AdminUser } = require('../../db');
+const { SystemAnnouncement, AdminUser, OperationLog } = require('../../db');
 
 // 简单生成唯一ID（避免引入 ESM 版 uuid 与 CommonJS 冲突）
 const generateAnnouncementId = () => {
     return 'ann_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+};
+
+// 日志ID生成器
+const generateLogId = () => {
+    const random = Math.random().toString(36).slice(2, 8);
+    return `log_${Date.now()}_${random}`;
 };
 
 // 管理员发布系统公告
@@ -46,6 +52,20 @@ router.post('/create', async (req, res) => {
             create_time: now,
             update_time: now
         });
+
+        // 记录“发布系统公告”操作日志
+        try {
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'create_announcement',
+                description: `管理员 ${adminName || admin_id || '未知'} 发布系统公告《${trimmedTitle}》`,
+                create_time: now
+            });
+        } catch (logErr) {
+            console.log('记录发布系统公告日志失败:', logErr);
+        }
 
         return res.json({
             msg: 'success',

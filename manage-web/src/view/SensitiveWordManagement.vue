@@ -46,8 +46,8 @@
 
       <div class="pagination">
         <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="pageSize"
+          :current-page="page"
+          :page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
@@ -182,9 +182,12 @@ const handleCreate = async () => {
 
   creating.value = true
   try {
+    const adminInfoStr = localStorage.getItem('admin_info')
+    const adminInfo = adminInfoStr ? JSON.parse(adminInfoStr) : null
     const res = await adminSensitiveWordAPI.createWord({
       word,
-      remark: form.value.remark?.trim() || ''
+      remark: form.value.remark?.trim() || '',
+      admin_id: adminInfo?.admin_id || ''
     })
     if (res.msg === 'success') {
       ElMessage.success('创建成功')
@@ -214,7 +217,12 @@ const handleDelete = async (row) => {
         cancelButtonText: '取消'
       }
     )
-    const res = await adminSensitiveWordAPI.deleteWord(row._id)
+    const adminInfoStr = localStorage.getItem('admin_info')
+    const adminInfo = adminInfoStr ? JSON.parse(adminInfoStr) : null
+    const res = await adminSensitiveWordAPI.deleteWord({
+      id: row._id,
+      admin_id: adminInfo?.admin_id || ''
+    })
     if (res.msg === 'success') {
       ElMessage.success('删除成功')
       fetchList()

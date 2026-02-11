@@ -96,8 +96,8 @@ export const adminGoodsAPI = {
   },
   
   // 设置商品热度加分
-  setHeatBonus(goods_id, admin_heat_bonus) {
-    return api.post('/admin/goods/setHeatBonus', { goods_id, admin_heat_bonus });
+  setHeatBonus(goods_id, admin_heat_bonus, admin_id) {
+    return api.post('/admin/goods/setHeatBonus', { goods_id, admin_heat_bonus, admin_id });
   },
   
   // 获取热度榜单
@@ -147,8 +147,8 @@ export const adminSensitiveWordAPI = {
   },
 
   // 删除敏感词
-  deleteWord(id) {
-    return api.post('/admin/sensitive-word/delete', { id });
+  deleteWord(data) {
+    return api.post('/admin/sensitive-word/delete', data);
   }
 };
 
@@ -167,6 +167,19 @@ export const adminFeedbackAPI = {
   // 回复反馈
   replyFeedback(data) {
     return api.post('/admin/feedback/reply', data);
+  }
+};
+
+// 管理员设置相关 API（修改密码 & 系统日志）
+export const adminSettingsAPI = {
+  // 修改密码
+  changePassword(data) {
+    return api.post('/admin/settings/changePassword', data);
+  },
+
+  // 获取操作日志
+  getLogs(params) {
+    return api.get('/admin/settings/logs', { params });
   }
 };
 

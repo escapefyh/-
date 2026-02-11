@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { SensitiveWord } = require('../../db');
+const { SensitiveWord, AdminUser, OperationLog } = require('../../db');
+
+// 日志ID生成器
+const generateLogId = () => {
+    const random = Math.random().toString(36).slice(2, 8);
+    return `log_${Date.now()}_${random}`;
+};
 
 // 创建敏感词
 // POST /admin/sensitive-word/create
 router.post('/create', async (req, res) => {
     try {
-        const { word, remark } = req.body;
+        const { word, remark, admin_id } = req.body;
 
         if (!word || typeof word !== 'string' || word.trim().length === 0) {
             return res.status(200).json({
@@ -40,6 +46,25 @@ router.post('/create', async (req, res) => {
             create_time: now,
             update_time: now
         });
+
+        // 记录“创建敏感词”操作日志
+        try {
+            let adminName = '';
+            if (admin_id) {
+                const admin = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
+                adminName = admin?.name || '';
+            }
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'create_sensitive_word',
+                description: `管理员 ${adminName || admin_id || '未知'} 新增敏感词「${trimmed}」`,
+                create_time: now
+            });
+        } catch (logErr) {
+            console.log('记录创建敏感词日志失败:', logErr);
+        }
 
         return res.json({
             msg: 'success',
@@ -107,7 +132,7 @@ router.get('/list', async (req, res) => {
 // POST /admin/sensitive-word/delete
 router.post('/delete', async (req, res) => {
     try {
-        const { id } = req.body;
+        const { id, admin_id } = req.body;
         if (!id) {
             return res.status(200).json({
                 msg: 'error',
@@ -115,12 +140,33 @@ router.post('/delete', async (req, res) => {
             });
         }
 
+        const doc = await SensitiveWord.findById(id).lean();
         const result = await SensitiveWord.deleteOne({ _id: id });
         if (result.deletedCount === 0) {
             return res.status(200).json({
                 msg: 'error',
                 error: '删除失败：记录不存在'
             });
+        }
+
+        // 记录“删除敏感词”操作日志
+        try {
+            let adminName = '';
+            if (admin_id) {
+                const admin = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
+                adminName = admin?.name || '';
+            }
+            const wordText = doc?.word || '';
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'delete_sensitive_word',
+                description: `管理员 ${adminName || admin_id || '未知'} 删除敏感词「${wordText || id}」`,
+                create_time: Date.now()
+            });
+        } catch (logErr) {
+            console.log('记录删除敏感词日志失败:', logErr);
         }
 
         return res.json({

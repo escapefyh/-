@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { Goods, SystemAnnouncement, User, AdminUser } = require('../../db');
+const { Goods, SystemAnnouncement, User, AdminUser, OperationLog } = require('../../db');
+
+// 简单的日志ID生成器
+const generateLogId = () => {
+    const random = Math.random().toString(36).slice(2, 8);
+    return `log_${Date.now()}_${random}`;
+};
 
 // 处理图片URL，确保返回完整的OSS URL
 const processImageUrls = (images) => {
@@ -53,7 +59,7 @@ const processImageUrls = (images) => {
 // POST /admin/goods/setHeatBonus
 router.post('/setHeatBonus', async (req, res) => {
     try {
-        const { goods_id, admin_heat_bonus } = req.body;
+        const { goods_id, admin_heat_bonus, admin_id } = req.body;
 
         // 1. 参数验证
         if (!goods_id) {
@@ -100,7 +106,28 @@ router.post('/setHeatBonus', async (req, res) => {
         goods.admin_heat_bonus = Math.floor(bonusNum);
         await goods.save();
 
-        // 6. 返回成功响应
+        // 6. 记录操作日志
+        try {
+            let adminName = '';
+            if (admin_id) {
+                const admin = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
+                if (admin) {
+                    adminName = admin.name || '';
+                }
+            }
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'set_heat_bonus',
+                description: `管理员 ${adminName || admin_id || '未知'} 为商品（${goods.description || goods.goods_id}）设置热度加分为 ${goods.admin_heat_bonus}`,
+                create_time: Date.now()
+            });
+        } catch (logErr) {
+            console.log('记录设置热度加分日志失败:', logErr);
+        }
+
+        // 7. 返回成功响应
         res.json({
             msg: "success",
             data: {
@@ -279,9 +306,10 @@ router.post('/offShelf', async (req, res) => {
 
         // 查管理员信息（可选）
         let adminName = '';
+        let adminInfo = null;
         if (admin_id) {
-            const admin = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
-            adminName = admin?.name || '';
+            adminInfo = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
+            adminName = adminInfo?.name || '';
         }
 
         // 给该用户发送一条系统公告（仅该用户可见）
@@ -307,6 +335,21 @@ ${reasonText}`;
                 create_time: now,
                 update_time: now
             });
+        }
+
+        // 记录“下架商品”操作日志
+        try {
+            const nowForLog = Date.now();
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'off_shelf',
+                description: `管理员 ${adminName || admin_id || '未知'} 下架并删除了商品（${goods.description || goods.goods_id}），原因：${reason && reason.trim() ? reason.trim() : '未填写'}`,
+                create_time: nowForLog
+            });
+        } catch (logErr) {
+            console.log('记录下架商品日志失败:', logErr);
         }
 
         return res.json({ msg: 'success', data: { goods_id, message: '下架成功' } });

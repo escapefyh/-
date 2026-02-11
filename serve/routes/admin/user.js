@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { User, Order, Goods, SpecOption } = require('../../db');
+const { User, Order, Goods, SpecOption, AdminUser, OperationLog } = require('../../db');
+
+// 日志ID生成器
+const generateLogId = () => {
+    const random = Math.random().toString(36).slice(2, 8);
+    return `log_${Date.now()}_${random}`;
+};
 
 // 格式化时间戳为日期时间字符串
 const formatDateTime = (timestamp) => {
@@ -163,7 +169,7 @@ router.get('/list', async (req, res) => {
 // POST /admin/user/blacklist
 router.post('/blacklist', async (req, res) => {
     try {
-        const { user_id, is_blacklisted } = req.body;
+        const { user_id, is_blacklisted, admin_id } = req.body;
 
         if (!user_id) {
             return res.status(200).json({
@@ -186,6 +192,25 @@ router.post('/blacklist', async (req, res) => {
                 msg: 'error',
                 error: '用户不存在'
             });
+        }
+
+        // 记录“拉黑/取消拉黑用户”操作日志
+        try {
+            let adminName = '';
+            if (admin_id) {
+                const admin = await AdminUser.findOne({ admin_id: String(admin_id) }).lean();
+                adminName = admin?.name || '';
+            }
+            await OperationLog.create({
+                log_id: generateLogId(),
+                admin_id: admin_id ? String(admin_id) : '',
+                admin_name: adminName,
+                action: 'blacklist_user',
+                description: `管理员 ${adminName || admin_id || '未知'} 将用户 ${result.user_id}（${result.nickname || result.account || ''}）状态设置为 ${blacklistStatus === 1 ? '已拉黑' : '正常'}`,
+                create_time: Date.now()
+            });
+        } catch (logErr) {
+            console.log('记录拉黑用户日志失败:', logErr);
         }
 
         res.status(200).json({

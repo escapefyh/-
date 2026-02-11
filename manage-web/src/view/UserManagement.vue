@@ -197,9 +197,12 @@ const handleBlacklist = async (row) => {
       type: 'warning'
     })
 
+    const adminInfoStr = localStorage.getItem('admin_info')
+    const adminInfo = adminInfoStr ? JSON.parse(adminInfoStr) : null
     const response = await adminUserAPI.blacklistUser({
       user_id: row.user_id,
-      is_blacklisted: row.is_blacklisted === 1 ? 0 : 1
+      is_blacklisted: row.is_blacklisted === 1 ? 0 : 1,
+      admin_id: adminInfo?.admin_id || ''
     })
 
     if (response.msg === 'success') {

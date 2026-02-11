@@ -387,9 +387,12 @@ const handleConfirmSetHeatBonus = async () => {
 
   settingHeatBonus.value = true
   try {
+    const adminInfoStr = localStorage.getItem('admin_info')
+    const adminInfo = adminInfoStr ? JSON.parse(adminInfoStr) : null
     const response = await adminGoodsAPI.setHeatBonus(
       heatBonusForm.value.goods_id,
-      heatBonusForm.value.admin_heat_bonus
+      heatBonusForm.value.admin_heat_bonus,
+      adminInfo?.admin_id || ''
     )
     
     if (response.msg === 'success') {

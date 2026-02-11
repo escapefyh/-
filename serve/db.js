@@ -975,6 +975,45 @@ AdminUserSchema.index({ phone: 1 }); // 手机号索引
 
 const AdminUser = mongoose.model("AdminUser", AdminUserSchema);
 
+// 管理系统操作日志表（记录管理员在后台的关键操作）
+const OperationLogSchema = new mongoose.Schema({
+    // 日志ID
+    log_id: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 管理员ID
+    admin_id: {
+        type: String,
+        default: ''
+    },
+    // 管理员姓名
+    admin_name: {
+        type: String,
+        default: ''
+    },
+    // 操作类型（如：change_password, create_announcement 等）
+    action: {
+        type: String,
+        required: true
+    },
+    // 具体描述（人类可读）
+    description: {
+        type: String,
+        required: true
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    }
+});
+
+OperationLogSchema.index({ create_time: -1 });
+
+const OperationLog = mongoose.model("OperationLog", OperationLogSchema);
+
 // 系统公告表（管理员发布，所有用户可见；也可针对单个用户）
 const SystemAnnouncementSchema = new mongoose.Schema({
     // 公告唯一id
@@ -1118,5 +1157,6 @@ module.exports = {
     SearchKeyword,
     SystemAnnouncement,
     SensitiveWord,
-    Feedback
+    Feedback,
+    OperationLog
 };

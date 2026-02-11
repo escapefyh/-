@@ -67,6 +67,16 @@ const router = createRouter({
           path: '/feedback-management',
           name: 'FeedbackManagement',
           component: () => import('../view/FeedbackManagement.vue')
+        },
+        {
+          path: '/settings/password',
+          name: 'SettingsPassword',
+          component: () => import('../view/SettingsPassword.vue')
+        },
+        {
+          path: '/settings/logs',
+          name: 'SettingsLogs',
+          component: () => import('../view/SettingsLogs.vue')
         }
       ]
     }

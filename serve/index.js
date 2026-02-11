@@ -47,6 +47,7 @@ const adminGoodsRoutes = require('./routes/admin/goods');
 const adminAnnouncementRoutes = require('./routes/admin/announcement');
 const adminSensitiveWordRoutes = require('./routes/admin/sensitiveWord');
 const adminFeedbackRoutes = require('./routes/admin/feedback');
+const adminSettingsRoutes = require('./routes/admin/settings');
 const analyticsTrafficRoutes = require('./routes/analytics/traffic');
 const analyticsTransactionRoutes = require('./routes/analytics/transaction');
 const announcementRoutes = require('./routes/announcement');
@@ -81,6 +82,7 @@ app.use('/admin/goods', adminGoodsRoutes); // /admin/goods/list, /admin/goods/de
 app.use('/admin/announcement', adminAnnouncementRoutes); // /admin/announcement/create, /admin/announcement/list, /admin/announcement/detail, /admin/announcement/delete
 app.use('/admin/sensitive-word', adminSensitiveWordRoutes); // /admin/sensitive-word/create, /admin/sensitive-word/list, /admin/sensitive-word/delete
 app.use('/admin/feedback', adminFeedbackRoutes); // /admin/feedback/list, /admin/feedback/detail, /admin/feedback/reply
+app.use('/admin/settings', adminSettingsRoutes); // /admin/settings/changePassword, /admin/settings/logs
 app.use('/analytics/traffic', analyticsTrafficRoutes); // /analytics/traffic/hot-keywords, /analytics/traffic/visit-trend, /analytics/traffic/active-hours
 app.use('/analytics/transaction', analyticsTransactionRoutes); // /analytics/transaction/trend, /analytics/transaction/category-share
 app.use('/announcement', announcementRoutes); // /announcement/list, /announcement/detail
