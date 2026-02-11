@@ -129,6 +129,24 @@ export const adminAnnouncementAPI = {
   }
 };
 
+// 管理员敏感词相关 API
+export const adminSensitiveWordAPI = {
+  // 创建敏感词
+  createWord(data) {
+    return api.post('/admin/sensitive-word/create', data);
+  },
+
+  // 获取敏感词列表
+  getWordList(params) {
+    return api.get('/admin/sensitive-word/list', { params });
+  },
+
+  // 删除敏感词
+  deleteWord(id) {
+    return api.post('/admin/sensitive-word/delete', { id });
+  }
+};
+
 // 数据分析相关 API
 export const analyticsAPI = {
   // 获取热搜关键词（词云图）

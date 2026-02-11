@@ -1,6 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { User, Goods, SpecOption } = require('../db');
+const { User, Goods, SpecOption, SensitiveWord } = require('../db');
+
+// 检查文本中是否包含敏感词
+const checkSensitiveWords = async (text) => {
+    if (!text || typeof text !== 'string') return { hasSensitive: false, word: '' };
+    const trimmed = text.trim();
+    if (!trimmed) return { hasSensitive: false, word: '' };
+
+    // 查询所有敏感词（数量通常较少，直接遍历）
+    const words = await SensitiveWord.find({}).select('word').lean();
+    for (const item of words) {
+        const w = (item.word || '').trim();
+        if (!w) continue;
+        if (trimmed.includes(w)) {
+            return { hasSensitive: true, word: w };
+        }
+    }
+    return { hasSensitive: false, word: '' };
+};
 
 // 发布商品
 router.post('/publish', async (req, res) => {
@@ -66,6 +84,16 @@ router.post('/publish', async (req, res) => {
             return res.status(200).json({
                 msg: "error",
                 error: "商品描述不能超过500个字符"
+            });
+        }
+
+        // 3.1 敏感词校验（目前以商品描述为“标题/描述”字段）
+        const { hasSensitive, word: hitWord } = await checkSensitiveWords(description);
+        if (hasSensitive) {
+            return res.status(200).json({
+                msg: "error",
+                error: "用词违规，请检查商品描述",
+                hitWord: hitWord
             });
         }
 

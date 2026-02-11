@@ -1011,6 +1011,35 @@ SystemAnnouncementSchema.index({ create_time: -1 }); // 便于按时间倒序查
 
 const SystemAnnouncement = mongoose.model("SystemAnnouncement", SystemAnnouncementSchema);
 
+// 敏感词表（用于过滤发布内容）
+const SensitiveWordSchema = new mongoose.Schema({
+    // 敏感词内容（唯一）
+    word: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    // 备注（可选）
+    remark: {
+        type: String,
+        default: ''
+    },
+    // 创建时间
+    create_time: {
+        type: Number,
+        required: true
+    },
+    // 更新时间
+    update_time: {
+        type: Number,
+        default: null
+    }
+});
+
+SensitiveWordSchema.index({ word: 1 });
+
+const SensitiveWord = mongoose.model("SensitiveWord", SensitiveWordSchema);
+
 module.exports = {
     User,
     AdminUser,
@@ -1031,5 +1060,6 @@ module.exports = {
     BrowseHistory,
     GroupBuy,
     SearchKeyword,
-    SystemAnnouncement
+    SystemAnnouncement,
+    SensitiveWord
 };

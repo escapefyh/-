@@ -52,6 +52,11 @@ const router = createRouter({
           path: '/announcement-management',
           name: 'AnnouncementManagement',
           component: () => import('../view/AnnouncementManagement.vue')
+        },
+        {
+          path: '/sensitive-word-management',
+          name: 'SensitiveWordManagement',
+          component: () => import('../view/SensitiveWordManagement.vue')
         }
       ]
     }

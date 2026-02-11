@@ -290,8 +290,10 @@ Page({
     } catch (error) {
       console.error('发布失败:', error);
       wx.hideLoading();
+      // ajax 封装在后端返回 msg==='error' 时会走到 catch，这里优先展示后端给的具体错误信息
+      const errMsg = error?.error || error?.msg || '发布失败，请重试';
       wx.showToast({
-        title: '发布失败，请重试',
+        title: errMsg,
         icon: 'none'
       });
     } finally {

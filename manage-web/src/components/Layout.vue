@@ -24,6 +24,10 @@
           <el-icon><Bell /></el-icon>
           <template #title>系统公告</template>
         </el-menu-item>
+        <el-menu-item index="/sensitive-word-management">
+          <el-icon><Edit /></el-icon>
+          <template #title>敏感词过滤</template>
+        </el-menu-item>
         <el-sub-menu index="/analytics">
           <template #title>
             <el-icon><DataAnalysis /></el-icon>
@@ -78,7 +82,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell } from '@element-plus/icons-vue'
+import { User, Expand, Fold, Avatar, CaretBottom, DataAnalysis, TrendCharts, Goods, Bell, Edit } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()

@@ -45,6 +45,7 @@ const adminUserRoutes = require('./routes/admin/user');
 const adminImageProxyRoutes = require('./routes/admin/imageProxy');
 const adminGoodsRoutes = require('./routes/admin/goods');
 const adminAnnouncementRoutes = require('./routes/admin/announcement');
+const adminSensitiveWordRoutes = require('./routes/admin/sensitiveWord');
 const analyticsTrafficRoutes = require('./routes/analytics/traffic');
 const analyticsTransactionRoutes = require('./routes/analytics/transaction');
 const announcementRoutes = require('./routes/announcement');
@@ -76,6 +77,7 @@ app.use('/admin/user', adminUserRoutes); // /admin/user/list, /admin/user/blackl
 app.use('/admin/image', adminImageProxyRoutes); // /admin/image/proxy?url=图片URL
 app.use('/admin/goods', adminGoodsRoutes); // /admin/goods/list, /admin/goods/detail, /admin/goods/setHeatBonus
 app.use('/admin/announcement', adminAnnouncementRoutes); // /admin/announcement/create, /admin/announcement/list, /admin/announcement/detail, /admin/announcement/delete
+app.use('/admin/sensitive-word', adminSensitiveWordRoutes); // /admin/sensitive-word/create, /admin/sensitive-word/list, /admin/sensitive-word/delete
 app.use('/analytics/traffic', analyticsTrafficRoutes); // /analytics/traffic/hot-keywords, /analytics/traffic/visit-trend, /analytics/traffic/active-hours
 app.use('/analytics/transaction', analyticsTransactionRoutes); // /analytics/transaction/trend, /analytics/transaction/category-share
 app.use('/announcement', announcementRoutes); // /announcement/list, /announcement/detail
